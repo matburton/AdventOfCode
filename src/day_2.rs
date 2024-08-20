@@ -34,8 +34,8 @@ mod part_1 {
         input.split('\n')
              .map(|l| l.split(':').collect::<Vec<_>>())
              .map(|p| (p[0][5 ..].parse::<usize>().unwrap(), to_draws(p[1])))
-             .filter(|t| t.1.iter().all(|d| draw_possible(d, contents)))
-             .map(|t| t.0)
+             .filter(|(_, b)| b.iter().all(|d| draw_possible(d, contents)))
+             .map(|(g, _)| g)
              .sum()
     }
 

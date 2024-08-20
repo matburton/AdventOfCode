@@ -33,7 +33,7 @@ mod part_1 {
                            .collect::<Vec<_>>();
         numbers[0].iter()
                   .zip(&numbers[1])
-                  .map(|t| get_record_beating_count(*t.0, *t.1))
+                  .map(|(t, r)| get_record_beating_count(*t, *r))
                   .product()
     }
 
