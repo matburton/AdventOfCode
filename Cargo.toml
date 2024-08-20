@@ -1,0 +1,6 @@
+[package]
+name = "workspace"
+edition = "2021"
+
+[dependencies]
+regex = "1.10.6"
