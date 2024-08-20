@@ -64,42 +64,26 @@ mod part_1 {
 
 mod part_2 {
     
+    use std::cmp::{ max, min };
+
     use super::*;
 
-    #[derive(Default)]
     struct Sliced<T> { matching: Range<T>, remainder: [Range<T>; 2] }
 
     fn slice_range(source: &Range<usize>, target: &Range<usize>) ->
         Sliced<usize> {
 
-        if source.start < target.start && source.end > target.end {
-             
-             return Sliced { matching: target.clone(),
-                             remainder: [source.start .. target.start,
-                                         target.end   .. source.end] }
+        if source.end <= target.start || source.start >= target.end {
+
+            return Sliced { matching: 0 .. 0,
+                            remainder: [source.clone(), 0 .. 0] };
         }
 
-        if source.start >= target.start && source.end <= target.end {
+        Sliced { matching: max(source.start, target.start)
+                           .. min(source.end, target.end),
 
-            return Sliced { matching: source.clone(), ..Default::default() };
-        }
-
-        if source.end <= target.end && source.end > target.start {
-
-            return Sliced { matching:  target.start .. source.end,
-                            remainder: [source.start .. target.start,
-                                        Default::default()] }
-        }
-
-        if source.start >= target.start && source.start < target.end {
-
-            return Sliced { matching:  source.start .. target.end,
-                            remainder: [target.end   .. source.end,
-                                        Default::default()] }
-        }
-
-        Sliced { remainder: [source.clone(), Default::default()],
-                 ..Default::default() }
+                 remainder: [ source.start .. target.start,
+                              target.end   .. source.end] }
     }
 
     #[derive(Default)]
