@@ -9,20 +9,21 @@ fn diffs(line: &str) -> Vec<Vec<isize>> {
 
     let mut diffs = Vec::from
         ([line.split_whitespace()
-                .map(|t| t.parse::<isize>().unwrap())
-                .collect::<Vec<_>>()]);
-
-    while diffs.last().unwrap().iter().any(|&v| v != 0) {
+              .map(|t| t.parse::<isize>().unwrap())
+              .collect::<Vec<_>>()]);
+    loop {
 
         let last = diffs.last().unwrap();
 
-        diffs.push(last.iter()
+        let next = last.iter()
                        .zip(last.iter().skip(1))
                        .map(|(a, b)| b - a)
-                       .collect());
-    }
+                       .collect::<Vec<_>>();
 
-    diffs
+        if next.iter().all(|&v| v == 0) { return diffs; }
+
+        diffs.push(next);
+    }
 }
 
 mod part_1 {
@@ -31,7 +32,7 @@ mod part_1 {
 
     fn next_val(line: &str) -> isize {
 
-        diffs(line).iter().rev().skip(1).fold(0, |a, d| a + d.last().unwrap())
+        diffs(line).iter().rev().fold(0, |a, d| a + d.last().unwrap())
     }
 
     fn get_result(input: &str) -> isize {
@@ -52,7 +53,7 @@ mod part_2 {
 
     fn next_val(line: &str) -> isize {
 
-        diffs(line).iter().rev().skip(1).fold(0, |a, d| d.first().unwrap() - a)
+        diffs(line).iter().rev().fold(0, |a, d| d.first().unwrap() - a)
     }
 
     fn get_result(input: &str) -> isize {

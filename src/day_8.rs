@@ -15,7 +15,7 @@ fn parse<'a>(input: &'a str) ->
     let lines = input.split('\n').collect::<Vec<_>>();
 
     let nodes =
-        lines[2 ..].iter().map(|l| (&l[0 .. 3], (&l[7 .. 10], &l[12 .. 15])));
+        lines[2 ..].iter().map(|l| (&l[.. 3], (&l[7 .. 10], &l[12 .. 15])));
 
     (Box::new(lines[0].chars().map(|c| c == 'L').cycle()),
      BTreeMap::from_iter(nodes))
