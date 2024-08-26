@@ -54,6 +54,32 @@ fn parse_pipe(char: char) -> Option<Pipe> {
     Some(Pipe { connects })
 }
 
+fn infer_connects(grid: &Grid, coord: Coord) -> [Direction; 2] {
+
+    let mut connects = Vec::new();
+
+    let mut connect_if_has = |direction: Direction, has: Direction| {
+        
+        if let Some(pipe) = coord.offset(direction)
+                                 .and_then(|c| grid.get_pipe(c)) {
+        
+            if pipe.connects.contains(&has) {
+
+                connects.push(direction);
+            }
+        }
+    };
+
+    connect_if_has(North, South);
+    connect_if_has(East,  West);
+    connect_if_has(South, North);
+    connect_if_has(West,  East);
+
+    connects.sort();
+
+    connects.try_into().unwrap()
+}
+
 fn parse_grid(input: &str) -> Grid {
 
     let lines = input.split('\n').collect::<Vec<_>>();
@@ -72,38 +98,24 @@ fn parse_grid(input: &str) -> Grid {
              .unwrap()
              .0;
              
-    Grid { start, cells }
+    let mut grid = Grid { start, cells };
+
+    grid.cells[grid.start.y][grid.start.x] =
+        Some(Pipe { connects: infer_connects(&grid, grid.start) });
+
+    grid
 }
 
 fn step(grid: &Grid, coord: Coord, last: Coord) -> Coord {
 
-    if let Some(pipe) = grid.get_pipe(coord) {
-
-        return pipe.connects
-                   .iter()
-                   .filter_map(|&d| coord.offset(d))
-                   .filter(|&c| c != last)
-                   .next()
-                   .unwrap()
-    }
-
-    for direction in [North, East, South, West] {
-
-        if let Some(neighbour) = coord.offset(direction) {
-
-            if let Some(pipe) = grid.get_pipe(neighbour) {
-
-                let connects = pipe.connects
-                                   .iter()
-                                   .filter_map(|&d| neighbour.offset(d))
-                                   .any(|c| c == coord);
-
-                if connects { return neighbour; }
-            }
-        }
-    }
-
-    panic!()
+    grid.get_pipe(coord)
+        .unwrap()
+        .connects
+        .iter()
+        .filter_map(|&d| coord.offset(d))
+        .filter(|&c| c != last)
+        .next()
+        .unwrap()
 }
 
 mod part_1 {
@@ -126,24 +138,19 @@ mod part_1 {
 
         let grid = parse_grid(input);
 
-        let (mut coord, mut last) = (grid.start, grid.start);
-
-        let mut steps = 0;
+        let mut trail = vec![grid.start];
 
         loop {
 
-            let new_coord = step(&grid, coord, last);
+            let last = match trail.len() { 1 => grid.start,
+                                           _ => trail[trail.len() - 2] };
 
-            last = coord;
+            trail.push(step(&grid, trail[trail.len() - 1], last));
 
-            coord = new_coord;
-
-            steps += 1;
-
-            if coord == grid.start { break; }
+            if trail.last().unwrap() == &grid.start { break; }
         }
 
-        steps / 2
+        trail.len() / 2
     }
 
     #[test]
@@ -183,32 +190,6 @@ mod part_1 {
                              ....FJL-7.||.||||...\n\
                              ....L---J.LJ.LJLJ...";
 
-    fn infer_connects(grid: &Grid, coord: Coord) -> [Direction; 2] {
-
-        let mut connects = Vec::new();
-
-        let mut connect_if_has = |direction: Direction, has: Direction| {
-            
-            if let Some(pipe) = coord.offset(direction)
-                                     .and_then(|c| grid.get_pipe(c)) {
-            
-                if pipe.connects.contains(&has) {
-
-                    connects.push(direction);
-                }
-            }
-        };
-
-        connect_if_has(North, South);
-        connect_if_has(East,  West);
-        connect_if_has(South, North);
-        connect_if_has(West,  East);
-
-        connects.sort();
-
-        connects.try_into().unwrap()
-    }
-
     fn get_result(input: &str) -> usize {
 
         let grid = parse_grid(input);
@@ -240,18 +221,12 @@ mod part_1 {
                 let coord = Coord { x, y };
 
                 if visited.contains(&coord) {
-
-                    let connects = match grid.get_pipe(coord) {
-                        Some(pipe) => pipe.connects,
-                        None       => infer_connects(&grid, coord)
-                    };
-                    
-                    match connects {
+                   
+                    match grid.get_pipe(coord).unwrap().connects {
                         [North, South] => { out = !out; },
                         [North, East] => { primer = Some(South); },
-                        [North, West] => { if primer == Some(North) { out = !out } },
-                        [South, West] => { if primer == Some(South) { out = !out } },
                         [South, East] => { primer = Some(North) },
+                        [d, West] => { if primer == Some(d) { out = !out } },
                         _ => {}
                     };
                 }
