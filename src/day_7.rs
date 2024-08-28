@@ -61,8 +61,7 @@ fn compare_hands(a: &Hand, b: &Hand) -> Ordering {
     a.iter()
      .zip(b)
      .map(|(card_a, card_b)| card_rank(*card_a).cmp(&card_rank(*card_b)))
-     .skip_while(|o| *o == Ordering::Equal)
-     .next()
+     .find(|&o| o != Ordering::Equal)
      .unwrap()
 }
 

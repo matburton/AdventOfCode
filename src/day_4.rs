@@ -21,7 +21,7 @@ fn parse_numbers(text: &str) -> BTreeSet<usize> {
 fn win_counts(input: &str) -> Vec<usize> {
 
     input.split('\n')
-         .map(|l| l.split(':').skip(1).next().unwrap())
+         .map(|l| l.split(':').nth(1).unwrap())
          .map(|l| l.split('|').map(parse_numbers).collect())
          .map(|n: Vec<_>| n[1].intersection(&n[0]).count())
          .collect()

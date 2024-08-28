@@ -52,7 +52,7 @@ mod part_2 {
 
         let numbers = input.replace(' ', "")
                            .split('\n')
-                           .map(|l| l.split(':').skip(1).next())
+                           .map(|l| l.split(':').nth(1))
                            .map(|t| t.unwrap().parse().unwrap())
                            .collect::<Vec<usize>>();
         

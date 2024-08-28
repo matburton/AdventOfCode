@@ -73,8 +73,8 @@ mod part_2 {
     fn get_result(input: &str) -> usize {
     
         input.split('\n')
-             .map(|l| to_draws(l.split(':').skip(1).next().unwrap()))
-             .map(|d| min_contents(&d).values().fold(1, |a, c| a * c))
+             .map(|l| to_draws(l.split(':').nth(1).unwrap()))
+             .map(|d| min_contents(&d).values().product::<usize>())
              .sum()
     }
 

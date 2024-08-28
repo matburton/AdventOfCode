@@ -36,7 +36,7 @@ impl Grid {
 
     fn get_pipe(&self, coord: Coord) -> Option<Pipe> {
 
-        self.cells.get(coord.y)?.get(coord.x)?.clone()
+        *self.cells.get(coord.y)?.get(coord.x)?
     }
 }
 
@@ -113,26 +113,13 @@ fn step(grid: &Grid, coord: Coord, last: Coord) -> Coord {
         .connects
         .iter()
         .filter_map(|&d| coord.offset(d))
-        .filter(|&c| c != last)
-        .next()
+        .find(|&c| c != last)
         .unwrap()
 }
 
 mod part_1 {
 
     use super::*;
-
-    const EXAMPLE_A: &str = ".....\n\
-                            .S-7.\n\
-                            .|.|.\n\
-                            .L-J.\n\
-                            .....";
-
-    const EXAMPLE_B: &str = "..F7.\n\
-                            .FJ|.\n\
-                            SJ.L7\n\
-                            |F--J\n\
-                            LJ...";
 
     fn get_result(input: &str) -> usize {
 
@@ -154,10 +141,28 @@ mod part_1 {
     }
 
     #[test]
-    fn example_a() { assert_eq!(get_result(EXAMPLE_A), 4); }
+    fn example_a() {
+
+        const EXAMPLE_A: &str = ".....\n\
+                                 .S-7.\n\
+                                 .|.|.\n\
+                                 .L-J.\n\
+                                 .....";
+
+        assert_eq!(get_result(EXAMPLE_A), 4);
+    }
 
     #[test]
-    fn example_b() { assert_eq!(get_result(EXAMPLE_B), 8); }
+    fn example_b() {
+
+        const EXAMPLE_B: &str = "..F7.\n\
+                                 .FJ|.\n\
+                                 SJ.L7\n\
+                                 |F--J\n\
+                                 LJ...";
+        
+        assert_eq!(get_result(EXAMPLE_B), 8);
+    }
     
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 6927); }

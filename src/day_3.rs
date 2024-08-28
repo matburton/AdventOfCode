@@ -85,7 +85,7 @@ mod part_1 {
 
                 let coord = Coord { x, y };
 
-                let char = get_character(coord, &matrix).unwrap();
+                let char = get_character(coord, matrix).unwrap();
 
                 if let Ok(digit) = char.to_string().parse::<usize>() {
 
@@ -98,7 +98,7 @@ mod part_1 {
                         acc.seen_symbol =
                             coord.get_surrounding()
                                  .into_iter()
-                                 .filter_map(|c| get_character(c, &matrix))
+                                 .filter_map(|c| get_character(c, matrix))
                                  .any(|c| c != '.' && !c.is_ascii_digit());
                     }
 

@@ -33,6 +33,7 @@ mod part_1 {
         Some(source - map_item.source.start + map_item.target_start)
     }
     
+    #[allow(clippy::ptr_arg)]
     fn apply_map(source: usize, map: &Vec<MapItem>) -> usize {
     
         map.iter()

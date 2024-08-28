@@ -37,7 +37,7 @@ mod part_1 {
 
     fn get_result(input: &str) -> isize {
 
-        input.split('\n').map(|l| next_val(l)).sum()
+        input.split('\n').map(next_val).sum()
     }
 
     #[test]
@@ -58,7 +58,7 @@ mod part_2 {
 
     fn get_result(input: &str) -> isize {
 
-        input.split('\n').map(|l| next_val(l)).sum()
+        input.split('\n').map(next_val).sum()
     }
 
     #[test]

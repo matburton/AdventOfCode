@@ -27,12 +27,12 @@ mod part_1 {
     #[test]
     fn example() {
     
-        const example_input: &str = "1abc2\n\
+        const EXAMPLE_INPUT: &str = "1abc2\n\
                                      pqr3stu8vwx\n\
                                      a1b2c3d4e5f\n\
                                      treb7uchet";
     
-        assert_eq!(get_result(example_input), 142);
+        assert_eq!(get_result(EXAMPLE_INPUT), 142);
     }
     
     #[test]
@@ -83,8 +83,8 @@ mod part_2 {
     fn get_result(input: &str) -> usize {
     
         input.split('\n')
-             .map(|l| (first_digit(l, &*REGEX_FROM_LEFT),
-                       first_digit(l, &*REGEX_FROM_RIGHT)))
+             .map(|l| (first_digit(l, &REGEX_FROM_LEFT),
+                       first_digit(l, &REGEX_FROM_RIGHT)))
              .map(|t| 10 * t.0 + t.1)
              .sum()
     }
@@ -92,7 +92,7 @@ mod part_2 {
     #[test]
     fn example() {
     
-        const example_input: &str = "two1nine\n\
+        const EXAMPLE_INPUT: &str = "two1nine\n\
                                      eightwothree\n\
                                      abcone2threexyz\n\
                                      xtwone3four\n\
@@ -100,7 +100,7 @@ mod part_2 {
                                      zoneight234\n\
                                      7pqrstsixteen";
     
-        assert_eq!(get_result(example_input), 281);
+        assert_eq!(get_result(EXAMPLE_INPUT), 281);
     }
     
     #[test]
