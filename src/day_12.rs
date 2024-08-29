@@ -1,4 +1,6 @@
 
+use std::collections::HashMap;
+
 const INPUT: &str = include_str!("../input/day_12.txt");
 
 const EXAMPLE: &str = "???.### 1,1,3\n\
@@ -12,7 +14,12 @@ fn parse_spec(text: &str) -> Vec<usize> {
     text.split(',').map(|f| f.parse().unwrap()).collect()
 }
 
-fn arrangements(mut row: &str, spec: &[usize]) -> usize {
+#[derive(PartialEq, Eq, Hash)]
+struct State<'a> { row: &'a str, spec: &'a[usize] }
+
+fn arrangements<'a>(mut row: &'a str,
+                    spec: &'a [usize],
+                    cache: &mut HashMap<State<'a>, usize>) -> usize {
 
     let left = spec.iter().sum::<usize>();
 
@@ -30,10 +37,20 @@ fn arrangements(mut row: &str, spec: &[usize]) -> usize {
 
         if fits {
 
-            let row = if row.len() > run_length { &row[run_length + 1 ..] }
-                                           else { Default::default() };
+            let state = State {
+                row: if row.len() > run_length { &row[run_length + 1 ..] }
+                                          else { Default::default() },
+                spec: &spec[1 ..]
+            };
 
-            count += arrangements(row, &spec[1 ..]);
+            count += cache.get(&state).copied().unwrap_or_else(|| {
+
+                let count = arrangements(state.row, state.spec, cache);
+
+                cache.insert(state, count);
+
+                count
+            });
         }
 
         row = if &row[.. 1] == "#" { break; } else { &row[1 ..] };
@@ -50,7 +67,7 @@ mod part_1 {
 
         input.split('\n')
              .map(|l| l.split(' ').collect::<Vec<_>>())
-             .map(|v| arrangements(v[0], &parse_spec(v[1])))
+             .map(|v| arrangements(v[0], &parse_spec(v[1]), &mut HashMap::new()))
              .sum()
     }
 
@@ -78,7 +95,7 @@ mod part_2 {
              .map(|(_, l)| l.split(' ').collect::<Vec<_>>())
              .map(|v| (unfold(v[0], "?"), unfold(v[1], ",")))
              .map(|t| (std::time::Instant::now(),
-                       arrangements(&t.0, &parse_spec(&t.1))))
+                       arrangements(&t.0, &parse_spec(&t.1), &mut HashMap::new())))
              .inspect(|(t, c)| println!(" -> {} ({:?})", c, t.elapsed()))
              .map(|(_, c)| c)
              .sum()
@@ -88,5 +105,5 @@ mod part_2 {
     fn example() { assert_eq!(get_result(EXAMPLE), 525152); }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT), 0); }
+    fn real() { assert_eq!(get_result(INPUT), 3476169006222); }
 }
