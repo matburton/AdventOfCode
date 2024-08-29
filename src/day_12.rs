@@ -15,7 +15,7 @@ fn parse_spec(text: &str) -> Vec<usize> {
 }
 
 #[derive(PartialEq, Eq, Hash)]
-struct State<'a> { row: &'a str, spec: &'a[usize] }
+struct State<'a> { row: &'a str, spec: &'a [usize] }
 
 fn arrangements<'a>(mut row: &'a str,
                     spec: &'a [usize],
@@ -82,22 +82,16 @@ mod part_2 {
 
     use super::*;
 
-    use std::{ iter::repeat, io::stdout, io::Write };
+    use std::iter::repeat;
 
     fn get_result(input: &str) -> usize {
 
         let unfold = |t, s| repeat(t).take(5).collect::<Vec<_>>().join(s);
 
         input.split('\n')
-             .enumerate()
-             .inspect(|(i, l)| { print!("{:<4} {}", i, &l);
-                                 let _ = stdout().flush(); })
-             .map(|(_, l)| l.split(' ').collect::<Vec<_>>())
+             .map(|l| l.split(' ').collect::<Vec<_>>())
              .map(|v| (unfold(v[0], "?"), unfold(v[1], ",")))
-             .map(|t| (std::time::Instant::now(),
-                       arrangements(&t.0, &parse_spec(&t.1), &mut HashMap::new())))
-             .inspect(|(t, c)| println!(" -> {} ({:?})", c, t.elapsed()))
-             .map(|(_, c)| c)
+             .map(|t| arrangements(&t.0, &parse_spec(&t.1), &mut HashMap::new()))
              .sum()
     }
 
