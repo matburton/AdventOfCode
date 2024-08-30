@@ -26,25 +26,29 @@ fn rotated(slices: &[&[char]]) -> Vec<Vec<char>> {
     lines
 }
 
-fn reflection_index(slices: &[&[char]]) -> Option<usize> {
+fn reflection_indexes(slices: &[&[char]]) -> Vec<usize> {
 
-    (1 .. slices.len()).find(|&i| slices[.. i].iter()
-                                              .rev()
-                                              .zip(slices[i ..].iter())
-                                              .all(|(a, b)| a == b))
+    let reflects = |i|
+        slices[.. i].iter().rev().zip(slices[i ..].iter()).all(|(a, b)| a == b);
+
+    (1 .. slices.len()).filter(|&i| reflects(i)).collect()
 }
 
-fn score_pattern(text: &[char]) -> Option<usize> {
+fn score_pattern(text: &[char]) -> Vec<usize> {
 
     let slices = text.chunk_by(|_, &c| c != '\n')
                      .map(|s| if s[0] == '\n' { &s[1 ..] } else { s })
                      .collect::<Vec<_>>();
 
-    if let Some(index) = reflection_index(&slices) { return Some(index * 100); }
-    
     let rotated = rotated(&slices);
 
-    reflection_index(&rotated.iter().map(|v| v.as_slice()).collect::<Vec<_>>())
+    let rotated_slices =
+        rotated.iter().map(|v| v.as_slice()).collect::<Vec<_>>();
+
+    reflection_indexes(&slices).iter()
+                               .map(|s| s * 100)
+                               .chain(reflection_indexes(&rotated_slices))
+                               .collect()
 }
 
 mod part_1 {
@@ -54,8 +58,7 @@ mod part_1 {
     fn get_result(input: &str) -> usize {
 
         input.split("\n\n")
-             .map(|t| t.chars().collect::<Vec<_>>())
-             .filter_map(|v| score_pattern(&v))
+             .map(|t| score_pattern(&t.chars().collect::<Vec<_>>())[0])
              .sum()
     }
 
@@ -74,7 +77,7 @@ mod part_2 {
 
         let mut chars = text.chars().collect::<Vec<_>>();
 
-        let original_score = score_pattern(&chars).unwrap();
+        let original_score = score_pattern(&chars)[0];
 
         let invert = |chars: &mut [char], index|
             chars[index] = match chars[index] { '#' => '.', _ => '#' };
@@ -85,15 +88,16 @@ mod part_2 {
 
             invert(&mut chars, index);
 
-            if let Some(score) = score_pattern(&chars) {
+            let score = score_pattern(&chars).iter()
+                                             .copied()
+                                             .find(|&s| s != original_score);
 
-                if score != original_score { return score; }
-            }
+            if let Some(s) = score { return s; }
 
             invert(&mut chars, index);
         };
 
-        original_score
+        panic!("No new score:\n{}\nOriginal Score {}", text, original_score);
     }
 
     fn get_result(input: &str) -> usize {
@@ -105,5 +109,5 @@ mod part_2 {
     fn example() { assert_eq!(get_result(EXAMPLE), 400); }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT), 44333); } // TODO: Too high
+    fn real() { assert_eq!(get_result(INPUT), 36474); }
 }
