@@ -11,45 +11,12 @@ const EXAMPLE: &str = "O....#....\n\
                        .......O..\n\
                        #....###..\n\
                        #OO..#....";
-#[derive(Hash)]
-struct Platform { rocks: Vec<Vec<char>> }
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-struct Coord { x: usize, y: usize }
-
-impl Coord {
-
-    fn moved(self, direction: Direction) -> Option<Coord> {
-
-        let (x, y) = match direction { North => ( 0, -1),
-                                       South => ( 0,  1),
-                                       East  => ( 1,  0),
-                                       West  => (-1,  0) };
-
-        match (self.x.checked_add_signed(x), self.y.checked_add_signed(y)) {
-
-            (Some(x), Some(y)) => Some(Coord { x, y }),
-
-            _ => None
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-enum Direction { North, South, East, West }
+use super::grid::*;
 
 use Direction::*;
 
-impl Direction {
-
-    fn opposite(self) -> Direction {
-
-        match self { North => South,
-                     South => North,
-                     East  => West,
-                     West  => East }
-    }
-}
+#[derive(Hash)]
+struct Platform { rocks: Vec<Vec<char>> }
 
 impl Platform {
 
@@ -70,15 +37,16 @@ impl Platform {
     fn tilt(&mut self, direction: Direction) {
 
         let mut outer = Some(match direction {
-            North => Coord { x: 0, y: 0 },
-            South => Coord { x: 0, y: self.rocks.len() - 1 },
-            East  => Coord { x: self.rocks[0].len() - 1, y: 0 },
-            West  => Coord { x: 0, y: 0 }
+            Up    => Coord { x: 0, y: 0 },
+            Down  => Coord { x: 0, y: self.rocks.len() - 1 },
+            Left  => Coord { x: 0, y: 0 },
+            Right => Coord { x: self.rocks[0].len() - 1, y: 0 }
         });
 
         while let Some(edge) = outer {
 
-            let (mut to, mut from) = (outer, edge.moved(direction.opposite()));
+            let (mut to, mut from) = (outer,
+                                      edge.stepped(direction.reversed()).ok());
 
             while let (Some(t), Some(f)) = (to, from) {
 
@@ -86,27 +54,28 @@ impl Platform {
 
                     ('.', 'O') => { self.rocks[t.y][t.x] = 'O';
                                     self.rocks[f.y][f.x] = '.';
-                                    to = t.moved(direction.opposite());
-                                    from = f.moved(direction.opposite()); },
+                                    to = t.stepped(direction.reversed()).ok();
+                                    from = f.stepped(direction.reversed()).ok(); },
 
-                    ('.', '.') => { from = f.moved(direction.opposite()); },
+                    ('.', '.') => { from = f.stepped(direction.reversed()).ok(); },
 
                     (_, '#') => {
-                        to = f.moved(direction.opposite());
-                        from = to.and_then(|c| c.moved(direction.opposite()));
+                        to = f.stepped(direction.reversed()).ok();
+                        from = to.and_then(|c| c.stepped(direction.reversed()).ok());
                     },
 
                     _ => {
-                        to = t.moved(direction.opposite());
-                        from = to.and_then(|c| c.moved(direction.opposite()));
+                        to = t.stepped(direction.reversed()).ok();
+                        from = to.and_then(|c| c.stepped(direction.reversed()).ok());
                     }
                 }
 
                 from = from.filter(|&c| self.in_bounds(c));
             }
 
-            outer = edge.moved(match direction { North | South => East,
-                                                 East  | West  => South })
+            outer = edge.stepped(match direction { Up   | Down  => Right,
+                                                   Left | Right => Down })
+                        .ok()
                         .filter(|&c| self.in_bounds(c));
         }
     }
@@ -144,7 +113,7 @@ mod part_1 {
 
         let mut platform = Platform::parse(input);
 
-        platform.tilt(North);
+        platform.tilt(Up);
 
         platform.total_north_load()
     }
@@ -164,7 +133,7 @@ mod part_2 {
 
     fn cycle_platform(platform: &mut Platform) {
 
-        for direction in [North, West, South, East] {
+        for direction in [Up, Left, Down, Right] {
 
             platform.tilt(direction);
         }

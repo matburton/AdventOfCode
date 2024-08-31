@@ -32,4 +32,6 @@ mod day_14;
 
 mod day_15;
 
+mod grid;
+
 fn main() {}
