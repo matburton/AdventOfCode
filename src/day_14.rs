@@ -58,10 +58,8 @@ impl Platform {
                     (_, Some(Square)) => { to_coord = from_coord + !direction;
                                            from_coord = to_coord + !direction; },
 
-                    (Some(Round | Square), _) => {
-                        to_coord += !direction;
-                        from_coord = to_coord + !direction;
-                    }
+                    (Some(_), _) => { to_coord += !direction;
+                                      from_coord = to_coord + !direction; }
                 }
 
                 from_coord = from_coord.filter(|&c| self.grid.in_bounds(c));
