@@ -11,98 +11,73 @@ const EXAMPLE: &str = "O....#....\n\
                        .......O..\n\
                        #....###..\n\
                        #OO..#....";
-use super::grid::*;
 
-use Direction::*;
+use super::grid::{ *, Direction::* };
 
-#[derive(Hash)]
-struct Platform { rocks: Vec<Vec<char>> }
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum Rock { Round, Square }
+
+use Rock::*;
+
+struct Platform { grid: Grid<Option<Rock>> }
 
 impl Platform {
 
     fn parse(input: &str) -> Self {
 
-        Self {
-            rocks: input.split('\n')
-                        .map(|l| l.chars().collect::<Vec<_>>())
-                        .collect()
-        }
-    }
+        let to_rock = |c| match c { '.' => Some(None),
+                                    'O' => Some(Some(Rock::Round)),
+                                    '#' => Some(Some(Rock::Square)),
+                                    _   => None };
 
-    fn in_bounds(&self, coord: Coord) -> bool {
-
-        coord.x < self.rocks[0].len() && coord.y < self.rocks.len()
+        Self { grid: Grid::parse(input, to_rock).unwrap() }
     }
 
     fn tilt(&mut self, direction: Direction) {
 
-        let mut outer = Some(match direction {
-            Up    => Coord { x: 0, y: 0 },
-            Down  => Coord { x: 0, y: self.rocks.len() - 1 },
-            Left  => Coord { x: 0, y: 0 },
-            Right => Coord { x: self.rocks[0].len() - 1, y: 0 }
-        });
+        let mut outer = Some(Coord::from(match direction {
+            Down  => (0, self.grid.height() - 1),
+            Right => (self.grid.width() - 1, 0),
+            _     => (0, 0)
+        }));
 
-        while let Some(edge) = outer {
+        while outer.map_or(false, |c| self.grid.in_bounds(c)) {
 
-            let (mut to, mut from) = (outer,
-                                      edge.stepped(direction.reversed()).ok());
+            let (mut to_coord, mut from_coord) = (outer, outer + !direction);
 
-            while let (Some(t), Some(f)) = (to, from) {
+            while let Some((to, from)) = self.grid.get_two_at_mut(to_coord,
+                                                                  from_coord) {
+                match (*to, *from) {
 
-                match (self.rocks[t.y][t.x], self.rocks[f.y][f.x]) {
+                    (None, Some(Round)) => { std::mem::swap(to, from);
+                                             to_coord += !direction;
+                                             from_coord += !direction; },
 
-                    ('.', 'O') => { self.rocks[t.y][t.x] = 'O';
-                                    self.rocks[f.y][f.x] = '.';
-                                    to = t.stepped(direction.reversed()).ok();
-                                    from = f.stepped(direction.reversed()).ok(); },
+                    (None, None) => { from_coord += !direction; },
 
-                    ('.', '.') => { from = f.stepped(direction.reversed()).ok(); },
+                    (_, Some(Square)) => { to_coord = from_coord + !direction;
+                                           from_coord = to_coord + !direction; },
 
-                    (_, '#') => {
-                        to = f.stepped(direction.reversed()).ok();
-                        from = to.and_then(|c| c.stepped(direction.reversed()).ok());
-                    },
-
-                    _ => {
-                        to = t.stepped(direction.reversed()).ok();
-                        from = to.and_then(|c| c.stepped(direction.reversed()).ok());
+                    (Some(Round | Square), _) => {
+                        to_coord += !direction;
+                        from_coord = to_coord + !direction;
                     }
                 }
 
-                from = from.filter(|&c| self.in_bounds(c));
+                from_coord = from_coord.filter(|&c| self.grid.in_bounds(c));
             }
 
-            outer = edge.stepped(match direction { Up   | Down  => Right,
-                                                   Left | Right => Down })
-                        .ok()
-                        .filter(|&c| self.in_bounds(c));
+            outer += match direction { Up | Down  => Right, _ => Down };
         }
     }
 
     fn total_north_load(&self) -> usize {
 
-        let round_rock_count = |line: &[char]|
-            line.iter().copied().filter(|&c| c == 'O').count();
-
-        let index_to_load = |i| self.rocks.len() - i;
-
-        self.rocks.iter()
-                  .enumerate()
-                  .map(|(i, v)| round_rock_count(v) * index_to_load(i))
-                  .sum()
+        self.grid.iter()
+                 .filter(|(_, v)| **v == Some(Round))
+                 .map(|(c, _)| self.grid.height() - c.y)
+                 .sum()
     }
-}
-
-fn get_hash<T: std::hash::Hash>(x: &T) -> u64 {
-
-    use std::hash::Hasher;
-
-    let mut hasher = std::hash::DefaultHasher::new();
-
-    x.hash(&mut hasher);
-
-    hasher.finish()
 }
 
 mod part_1 {
@@ -143,11 +118,11 @@ mod part_2 {
 
         let mut hash_to_cycle = BTreeMap::new();
 
-        let mut cycle = 0usize;
+        let mut cycle = 0;
 
         loop {
 
-            let hash = get_hash(&platform);
+            let hash = platform.grid.get_hash();
 
             if let Some(c) = hash_to_cycle.get(&hash) {
 
