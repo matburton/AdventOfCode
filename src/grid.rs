@@ -28,6 +28,8 @@ impl std::ops::Not for Direction {
 #[derive(Clone, Copy)]
 pub struct Coord { pub x: usize, pub y: usize }
 
+impl Coord { pub fn new(x: usize, y: usize) -> Self { Self { x, y } } }
+
 impl std::fmt::Display for Coord {
 
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
