@@ -82,7 +82,7 @@ impl std::ops::AddAssign<Direction> for Option<Coord> {
     }
 }
 
-#[derive(Hash)]
+#[derive(Clone, Hash)]
 pub struct Grid<T> { cells: Vec<Vec<T>> }
 
 impl<T> Grid<T> {
@@ -118,14 +118,14 @@ impl<T> Grid<T> {
         coord.x < self.width() && coord.y < self.height()
     }
 
-    pub fn get_at(&mut self, coord: Coord) -> Option<&T> {
+    pub fn get_at(&mut self, coord: Option<Coord>) -> Option<&T> {
 
-        self.cells.get(coord.y).and_then(|v| v.get(coord.x))
+        coord.and_then(|c| self.cells.get(c.y).and_then(|v| v.get(c.x)))
     }
 
-    pub fn get_at_mut(&mut self, coord: Coord) -> Option<&mut T> {
+    pub fn get_at_mut(&mut self, coord: Option<Coord>) -> Option<&mut T> {
 
-        self.cells.get_mut(coord.y).and_then(|v| v.get_mut(coord.x))
+        coord.and_then(|c| self.cells.get_mut(c.y).and_then(|v| v.get_mut(c.x)))
     }
 
     pub fn get_two_at_mut(&mut self, a: Option<Coord>, b: Option<Coord>)

@@ -10,6 +10,7 @@ enum Mirror { Vertical, Horizontal, LeftLean, RightLean }
 
 use Mirror::*;
 
+#[derive(Clone)]
 struct Cell { mirror: Option<Mirror>, beams: [bool; 4] }
 
 impl Direction {
@@ -23,6 +24,7 @@ impl Direction {
     }
 }
 
+#[derive(Clone)]
 struct Contraption { grid: Grid<Cell> }
 
 impl Contraption {
@@ -46,24 +48,47 @@ impl Contraption {
 
     fn add_beams(&mut self, start_at: Coord, direction: Direction) {
 
-        let mut beam_queue = vec![(start_at, direction)];
+        let mut beam_queue = vec![(Some(start_at), direction)];
 
         while let Some((mut coord, mut direction)) = beam_queue.pop() {
 
             while let Some(cell) = self.grid.get_at_mut(coord) {
 
-                cell.beams[direction.to_index()] = true;
+                match &mut cell.beams[direction.to_index()] { true => break,
+                                                              b => *b = true }
 
-                match cell.mirror {
+                direction = match (cell.mirror, direction) {
 
-                    None => { coord += direction; },
-                    Some(Vertical) => {},
-                    Some(Horizontal) => {},
-                    Some(LeftLean) => {},
-                    Some(RightLean) => {}
-                }
+                      (None, _)
+                    | (Some(Vertical),   Up   | Down)
+                    | (Some(Horizontal), Left | Right) => direction,
+
+                    (Some(LeftLean), Up)    | (Some(RightLean), Down)  => Left,
+                    (Some(LeftLean), Down)  | (Some(RightLean), Up)    => Right,
+                    (Some(LeftLean), Left)  | (Some(RightLean), Right) => Up,
+                    (Some(LeftLean), Right) | (Some(RightLean), Left)  => Down,
+
+                    (Some(Vertical), Left | Right) => {
+                        beam_queue.push((coord + Down, Down));
+                        Up
+                    },
+
+                    (Some(Horizontal), Up | Down) => {
+                        beam_queue.push((coord + Left, Left));
+                        Right
+                    }
+                };
+
+                coord += direction;
             }
         }
+    }
+
+    fn energized_count(&self) -> usize {
+
+        self.grid.iter()
+                 .filter(|(_, c)| c.beams.iter().any(|&b| b))
+                 .count()
     }
 }
 
@@ -77,27 +102,49 @@ mod part_1 {
 
         contraption.add_beams(Coord::new(0, 0), Right);
         
-        contraption.grid.iter()
-                        .filter(|(_, c)| c.beams.iter().any(|&b| b))
-                        .count()
+        contraption.energized_count()
     }
 
     #[test]
     fn example() { assert_eq!(get_result(EXAMPLE), 46); }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT), 0); }
+    fn real() { assert_eq!(get_result(INPUT), 7860); }
 }
 
 mod part_2 {
 
     use super::*;
 
-    fn get_result(input: &str) -> usize { 0 }
+    fn get_result(input: &str) -> usize {
+
+        let contraption = Contraption::parse(input);
+
+        let (max_x, max_y) = (contraption.grid.width()  - 1,
+                              contraption.grid.height() - 1);
+
+        let energized_count = |(c, d)| {
+            let mut clone = contraption.clone();
+            clone.add_beams(c, d);
+            clone.energized_count()
+        };
+
+        let horizontal_entries =
+            (0 ..= max_x).flat_map(|x| [(Coord::new(x, 0), Down),
+                                        (Coord::new(x, max_y), Up)]);
+        let vertical_entries =
+            (0 ..= max_y).flat_map(|y| [(Coord::new(0, y), Right),
+                                        (Coord::new(max_x, y), Left)]);
+
+        horizontal_entries.chain(vertical_entries)
+                          .map(energized_count)
+                          .max()
+                          .unwrap()
+    }
 
     #[test]
-    fn example() { assert_eq!(get_result(EXAMPLE), 0); }
+    fn example() { assert_eq!(get_result(EXAMPLE), 51); }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT), 0); }
+    fn real() { assert_eq!(get_result(INPUT), 8331); }
 }
