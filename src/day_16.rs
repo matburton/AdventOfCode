@@ -46,41 +46,36 @@ impl Contraption {
         Contraption { grid: Grid::parse(input, parse_char).unwrap() }
     }
 
-    fn add_beams(&mut self, start_at: Coord, direction: Direction) {
+    fn add_beams(&mut self, mut coord: Option<Coord>, mut direction: Direction) {
 
-        let mut beam_queue = vec![(Some(start_at), direction)];
+        while let Some(cell) = self.grid.get_at_mut(coord) {
 
-        while let Some((mut coord, mut direction)) = beam_queue.pop() {
+            match &mut cell.beams[direction.to_index()] { true => break,
+                                                          b => *b = true }
 
-            while let Some(cell) = self.grid.get_at_mut(coord) {
+            direction = match (cell.mirror, direction) {
 
-                match &mut cell.beams[direction.to_index()] { true => break,
-                                                              b => *b = true }
+                  (None, _)
+                | (Some(Vertical),   Up   | Down)
+                | (Some(Horizontal), Left | Right) => direction,
 
-                direction = match (cell.mirror, direction) {
+                (Some(LeftLean), Up)    | (Some(RightLean), Down)  => Left,
+                (Some(LeftLean), Down)  | (Some(RightLean), Up)    => Right,
+                (Some(LeftLean), Left)  | (Some(RightLean), Right) => Up,
+                (Some(LeftLean), Right) | (Some(RightLean), Left)  => Down,
 
-                      (None, _)
-                    | (Some(Vertical),   Up   | Down)
-                    | (Some(Horizontal), Left | Right) => direction,
+                (Some(Vertical), Left | Right) => {
+                    self.add_beams(coord + Down, Down);
+                    Up
+                },
 
-                    (Some(LeftLean), Up)    | (Some(RightLean), Down)  => Left,
-                    (Some(LeftLean), Down)  | (Some(RightLean), Up)    => Right,
-                    (Some(LeftLean), Left)  | (Some(RightLean), Right) => Up,
-                    (Some(LeftLean), Right) | (Some(RightLean), Left)  => Down,
+                (Some(Horizontal), Up | Down) => {
+                    self.add_beams(coord + Left, Left);
+                    Right
+                }
+            };
 
-                    (Some(Vertical), Left | Right) => {
-                        beam_queue.push((coord + Down, Down));
-                        Up
-                    },
-
-                    (Some(Horizontal), Up | Down) => {
-                        beam_queue.push((coord + Left, Left));
-                        Right
-                    }
-                };
-
-                coord += direction;
-            }
+            coord += direction;
         }
     }
 
@@ -100,7 +95,7 @@ mod part_1 {
 
         let mut contraption = Contraption::parse(input);
 
-        contraption.add_beams(Coord::new(0, 0), Right);
+        contraption.add_beams(Some(Coord::new(0, 0)), Right);
         
         contraption.energized_count()
     }
@@ -125,7 +120,7 @@ mod part_2 {
 
         let energized_count = |(c, d)| {
             let mut clone = contraption.clone();
-            clone.add_beams(c, d);
+            clone.add_beams(Some(c), d);
             clone.energized_count()
         };
 
