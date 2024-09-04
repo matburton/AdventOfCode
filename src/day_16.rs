@@ -13,17 +13,6 @@ use Mirror::*;
 #[derive(Clone)]
 struct Cell { mirror: Option<Mirror>, beams: [bool; 4] }
 
-impl Direction {
-
-    fn to_index(self) -> usize {
-
-        match self { Up     => 0,
-                     Down   => 1,
-                     Left   => 2,
-                     Right  => 3 }
-    }
-}
-
 #[derive(Clone)]
 struct Contraption { grid: Grid<Cell> }
 

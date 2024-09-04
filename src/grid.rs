@@ -4,6 +4,30 @@ pub enum Direction { Up, Down, Left, Right }
 
 use Direction::*;
 
+pub enum Turn { Left, Right }
+
+impl Direction {
+
+    pub fn turned(self, turn: Turn) -> Direction {
+
+        let right_turned = match self { Up    => Right,
+                                        Right => Down,
+                                        Down  => Left,
+                                        Left  => Up };
+
+        match turn { Turn::Right => right_turned,
+                     Turn::Left => !right_turned }
+    }
+
+    pub fn to_index(self) -> usize {
+
+        match self { Up     => 0,
+                     Down   => 1,
+                     Left   => 2,
+                     Right  => 3 }
+    }
+}
+
 impl std::fmt::Display for Direction {
 
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
