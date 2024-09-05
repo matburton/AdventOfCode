@@ -1,8 +1,7 @@
 
-// TODO: This is very slow. 10 mins to solve part 1
+// TODO: This is very slow. 8 mins to solve part 1
 //       There must be a better way!
 //       Do I have too many states per cell?
-//       Immutable linked list to avoid re-visiting blocks?
 
 const INPUT: &str = include_str!("../input/day_17.txt");
 
@@ -41,49 +40,53 @@ impl City {
 
         let start_coord = Coord::new(0, 0);
 
-        let mut stack = vec![(start_coord, 0usize, Right),
-                             (start_coord, 0usize, Down)];
+        let end_coord = Coord::new(self.grid.width() - 1,
+                                   self.grid.height() - 1);
+
+        let mut stack = vec![(start_coord, 0usize, Right, 0usize),
+                             (start_coord, 0usize, Down,  0usize)];
 
         let to_index = |i, d: Direction| d.to_index() * 3 + i;
 
-        while let Some((mut coord, mut total_loss, direction)) = stack.pop() {
+        while let Some((mut coord, mut total_loss, direction, step)) = stack.pop() {
 
-            for forward_index in 0 .. 3 {
+            coord = if let Some(c) = coord + direction { c }
+                    else { continue; };
 
-                coord = if let Some(c) = coord + direction { c }
-                        else { break; };
+            let Some(block) = self.grid.get_at_mut(Some(coord))
+                              else { continue; };
 
-                let Some(block) = self.grid.get_at_mut(Some(coord))
-                                  else { break; };
+            total_loss += block.loss;
 
-                total_loss += block.loss;
+            let index = to_index(step, direction);
 
-                let index = to_index(forward_index, direction);
+            if block.min_total_losses[index] <= total_loss { continue; }
 
-                if block.min_total_losses[index] <= total_loss { break; }
+            for i in step .. 3 {
 
-                for i in forward_index .. 3 {
+                block.min_total_losses[to_index(i, direction)] = total_loss;
+            }
 
-                    block.min_total_losses[to_index(i, direction)] = total_loss;
-                }
+            if coord == end_coord { continue; }
 
-                // TODO: Prefer direction with lower value
-                //       to trim later searches earlier?
+            // TODO: Prefer direction with lower value
+            //       to trim later searches earlier?
 
-                if coord.x != self.grid.width() - 1 && coord.y != 0 {
+            if coord.x != self.grid.width() - 1 && coord.y != 0 {
 
-                    stack.push((coord, total_loss, direction.turned(Turn::Left)));
-                }
+                stack.push((coord, total_loss, direction.turned(Turn::Left), 0));
+            }
 
-                if coord.y != self.grid.height() - 1 && coord.x != 0 {
+            if coord.y != self.grid.height() - 1 && coord.x != 0 {
 
-                    stack.push((coord, total_loss, direction.turned(Turn::Right)));
-                }
+                stack.push((coord, total_loss, direction.turned(Turn::Right), 0));
+            }
+
+            if step < 2 {
+
+                stack.push((coord, total_loss, direction, step + 1));
             }
         }
-
-        let end_coord = Coord::new(self.grid.width() - 1,
-                                   self.grid.height() - 1);
 
         self.grid.get_at(Some(end_coord))
                  .unwrap()

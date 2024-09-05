@@ -49,7 +49,7 @@ impl std::ops::Not for Direction {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Coord { pub x: usize, pub y: usize }
 
 impl Coord { pub fn new(x: usize, y: usize) -> Self { Self { x, y } } }
