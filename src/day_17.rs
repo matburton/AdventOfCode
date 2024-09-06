@@ -1,5 +1,5 @@
 
-// TODO: This is very slow. 8 mins to solve part 1
+// TODO: This is very slow. 10 mins to solve part 1
 //       There must be a better way!
 //       Do I have too many states per cell?
 
@@ -43,48 +43,45 @@ impl City {
         let end_coord = Coord::new(self.grid.width() - 1,
                                    self.grid.height() - 1);
 
-        let mut stack = vec![(start_coord, 0usize, Right, 0usize),
-                             (start_coord, 0usize, Down,  0usize)];
+        let mut stack = vec![(start_coord, 0usize, Right),
+                             (start_coord, 0usize, Down)];
 
         let to_index = |i, d: Direction| d.to_index() * 3 + i;
 
-        while let Some((mut coord, mut total_loss, direction, step)) = stack.pop() {
+        while let Some((mut coord, mut total_loss, direction)) = stack.pop() {
 
-            coord = if let Some(c) = coord + direction { c }
-                    else { continue; };
+            for forward_index in 0 .. 3 {
 
-            let Some(block) = self.grid.get_at_mut(Some(coord))
-                              else { continue; };
+                coord = if let Some(c) = coord + direction { c }
+                        else { break; };
 
-            total_loss += block.loss;
+                let Some(block) = self.grid.get_at_mut(Some(coord))
+                                  else { break; };
 
-            let index = to_index(step, direction);
+                total_loss += block.loss;
 
-            if block.min_total_losses[index] <= total_loss { continue; }
+                let index = to_index(forward_index, direction);
 
-            for i in step .. 3 {
+                if block.min_total_losses[index] <= total_loss { break; }
 
-                block.min_total_losses[to_index(i, direction)] = total_loss;
-            }
+                block.min_total_losses[index] = total_loss;
 
-            if coord == end_coord { continue; }
+                for i in forward_index + 1 .. 3 {
 
-            // TODO: Prefer direction with lower value
-            //       to trim later searches earlier?
+                    block.min_total_losses[to_index(i, direction)] = total_loss;
+                }
 
-            if coord.x != self.grid.width() - 1 && coord.y != 0 {
+                if coord == end_coord { continue; }
 
-                stack.push((coord, total_loss, direction.turned(Turn::Left), 0));
-            }
+                if coord.x != self.grid.width() - 1 && coord.y != 0 {
 
-            if coord.y != self.grid.height() - 1 && coord.x != 0 {
+                    stack.push((coord, total_loss, direction.turned(Turn::Left)));
+                }
 
-                stack.push((coord, total_loss, direction.turned(Turn::Right), 0));
-            }
+                if coord.y != self.grid.height() - 1 && coord.x != 0 {
 
-            if step < 2 {
-
-                stack.push((coord, total_loss, direction, step + 1));
+                    stack.push((coord, total_loss, direction.turned(Turn::Right)));
+                }
             }
         }
 
