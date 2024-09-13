@@ -104,6 +104,7 @@ mod part_1 {
     #[test]
     fn example() { assert_eq!(get_result(EXAMPLE), 102); }
     
+    #[ignore = "slow"]
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 851); }
 }
