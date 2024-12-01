@@ -23,28 +23,13 @@ use std::collections::BTreeMap;
 
 use crate::grid::{ Direction, Direction::* };
 
-fn parse_direction(text: &str) -> Direction {
-    
-    match text { "U" => Up,
-                 "D" => Down,
-                 "L" => Left,
-                 "R" => Right,
-                 _   => panic!() }
-}
-
-fn parse(text: &str) -> BTreeMap<Coord, [Direction; 2]> {
+fn to_map(directions: &[(Direction, usize)]) -> BTreeMap<Coord, [Direction; 2]> {
 
     let mut map = BTreeMap::new();
 
     let mut coord = Coord { x: 0, y: 0 };
 
     let mut previous_direction = Direction::Up;
-
-    let directions =
-        text.split('\n')
-            .map(|l| l.split(' ').collect::<Vec<_>>())
-            .map(|v| (parse_direction(v[0]), v[1].parse::<usize>().unwrap()))
-            .collect::<Vec<_>>();
 
     for (direction, distance) in directions.iter().copied() {
 
@@ -115,13 +100,63 @@ fn score(map: &BTreeMap<Coord, [Direction; 2]>) -> usize {
 
 mod part_1 {
 
-    use super::*;    
+    use super::*;
 
-    fn get_result(input: &str) -> usize { score(&parse(input)) }
+    fn get_result(input: &str) -> usize {
+
+        let parse_dir = |text| {
+    
+            match text { "U" => Up,
+                         "D" => Down,
+                         "L" => Left,
+                         "R" => Right,
+                         _   => panic!() }
+        };
+
+        let map =
+            input.split('\n')
+                 .map(|l| l.split(' ').collect::<Vec<_>>())
+                 .map(|v| (parse_dir(v[0]), v[1].parse::<usize>().unwrap()))
+                 .collect::<Vec<_>>();
+        
+        score(&to_map(&map))
+    }
 
     #[test]
     fn example() { assert_eq!(get_result(EXAMPLE), 62); }
     
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 49061); }
+}
+
+mod part_2 {
+
+    use super::*;
+
+    fn get_result(input: &str) -> usize {
+
+        let parse_dir = |text| {
+    
+            match text { "0" => Right,
+                         "1" => Down,
+                         "2" => Left,
+                         "3" => Up,
+                         _   => panic!() }
+        };
+
+        let map =
+            input.split('\n')
+                 .map(|l| l.split(' ').last().unwrap())
+                 .map(|t| (parse_dir(&t[7 ..= 7]),
+                           usize::from_str_radix(&t[2 .. 7], 16).unwrap()))
+                 .collect::<Vec<_>>();
+        
+        score(&to_map(&map))
+    }
+
+    #[test]
+    fn example() { assert_eq!(get_result(EXAMPLE), 952408144115); }
+    
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT), 0); }
 }

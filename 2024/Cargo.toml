@@ -1,0 +1,5 @@
+[package]
+name = "workspace"
+edition = "2021"
+
+[dependencies]
