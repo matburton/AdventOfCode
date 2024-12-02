@@ -12,7 +12,7 @@ fn is_safe_step(level_prior: isize, level: isize, direction: bool) -> bool {
 
     let diff = level - level_prior;
 
-    return (diff > 0) == direction && diff.abs() <= 3 && diff != 0
+    (diff > 0) == direction && diff.abs() <= 3 && diff != 0
 }
 
 fn is_safe(levels: &[isize], direction: bool, dampen: bool) -> bool {
