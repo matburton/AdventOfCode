@@ -43,12 +43,13 @@ mod part_2 {
 
         for regex_match in regex.captures_iter(input) {
 
-            sum += match regex_match.get(0).unwrap().as_str() {
+            match regex_match.get(0).unwrap().as_str() {
 
-                "do()"    => { enabled = true;  0 },
-                "don't()" => { enabled = false; 0 },
-                _ if !enabled => 0,
-                _ => parse(regex_match.get(1)) * parse(regex_match.get(2))
+                "do()"        => enabled = true,
+                "don't()"     => enabled = false,
+                _ if !enabled => {}
+                _             => sum += parse(regex_match.get(1))
+                                      * parse(regex_match.get(2))
             }
         }
 
