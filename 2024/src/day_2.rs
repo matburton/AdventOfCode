@@ -17,9 +17,7 @@ fn is_safe_step(level_prior: isize, level: isize, direction: bool) -> bool {
 
 fn is_safe(levels: &[isize], direction: bool, dampen: bool) -> bool {
 
-    let mut all_steps_safe = true;
-
-    let mut step_safe = true;
+    let (mut all_steps_safe, mut step_safe) = (true, true);
 
     for index in 1 .. levels.len() {
 
