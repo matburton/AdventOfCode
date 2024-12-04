@@ -1,3 +1,5 @@
+use grid::Offset;
+
 
 const INPUT: &str = include_str!("../input/day_4.txt");
 
@@ -28,6 +30,16 @@ mod grid {
 
             Self { x: self.x + offset.x,
                    y: self.y + offset.y }
+        }
+    }
+
+    impl std::ops::Sub<Offset> for Offset {
+
+        type Output = Self;
+
+        fn sub(self, offset: Self) -> Self {
+
+            self + Offset { x: -offset.x, y: -offset.y }
         }
     }
 
@@ -90,20 +102,23 @@ mod grid {
     }
 }
 
+use grid::*;
+
+fn is_match(grid: &Grid<char>, target: &[char], offset: Offset, direction: Offset)
+    -> bool { 
+    
+    target.iter()
+          .enumerate()
+          .all(|(i, c)| grid.get(offset + direction * i) == Some(c))
+}
+
 mod part_1 {
 
-    use super::*;
-
-    use super::grid::*;
+    use super::{ *, grid::* };
 
     fn get_result(input: &str) -> usize {
 
         let grid = Grid::parse(input, Ok).unwrap();
-
-        let is_match = |target: &[char], offset, direction|
-            target.iter()
-                  .enumerate()
-                  .all(|(i, c)| grid.get(offset + direction * i) == Some(c));
 
         let directions =
             [-1, 0, 1].iter()
@@ -113,7 +128,7 @@ mod part_1 {
 
         let count_matches = |target, offset|
             directions.iter()
-                      .map(|&d| is_match(target, offset, d))
+                      .map(|&d| is_match(&grid, target, offset, d))
                       .filter(|&b| b)
                       .count();
         grid.iter()
@@ -126,4 +141,34 @@ mod part_1 {
     
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 2358); }
+}
+
+mod part_2 {
+
+    use super::{ *, grid::* };
+
+    fn get_result(input: &str) -> usize {
+
+        let grid = Grid::parse(input, Ok).unwrap();
+
+        let is_mas = |offset, direction|
+            is_match(&grid, &['M', 'A', 'S'], offset - direction, direction);
+
+        let is_mas_x = |offset|
+               (   is_mas(offset, Offset { x:  1, y:  1 })
+                || is_mas(offset, Offset { x: -1, y: -1 }))
+            && (   is_mas(offset, Offset { x: -1, y:  1 })
+                || is_mas(offset, Offset { x:  1, y: -1 }));
+
+        grid.iter()
+            .map(|(offset, _)| is_mas_x(offset))
+            .filter(|&b| b)
+            .count()
+    }
+  
+    #[test]
+    fn example() { assert_eq!(get_result(EXAMPLE), 9); }
+    
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT), 1737); }
 }
