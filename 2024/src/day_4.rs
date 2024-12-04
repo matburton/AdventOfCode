@@ -13,7 +13,7 @@ const EXAMPLE: &str = "MMMSXXMASM\n\
                        MXMXAXMASX";
 mod grid {
 
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, PartialEq, Eq)]
     pub struct Offset { pub x: isize, pub y: isize } // Can be used as a coord
 
     pub struct Grid<T> { cells: Vec<Vec<T>> } // Can be jagged
@@ -26,17 +26,19 @@ mod grid {
 
         fn add(self, offset: Self) -> Self {
 
-            Self { x: self.x + offset.x, y: self.y + offset.y }
+            Self { x: self.x + offset.x,
+                   y: self.y + offset.y }
         }
     }
 
-    impl std::ops::Mul<isize> for Offset {
+    impl std::ops::Mul<usize> for Offset {
 
         type Output = Self;
 
-        fn mul(self, scalar: isize) -> Self {
+        fn mul(self, scalar: usize) -> Self {
 
-            Self { x: self.x * scalar, y: self.y * scalar }
+            Self { x: self.x * scalar as isize,
+                   y: self.y * scalar as isize }
         }
     }
    
@@ -98,27 +100,24 @@ mod part_1 {
 
         let grid = Grid::parse(input, Ok).unwrap();
 
-        let is_xmas = |offset, direction| {
-
-            let string = (0 .. 4).map(|i| grid.get(offset + direction * i)
-                                              .copied())
-                                 .collect::<Option<Vec<_>>>();
-
-            match string { Some(v) => v == ['X', 'M', 'A', 'S'],
-                           None => false }
-        };
+        let is_match = |target: &[char], offset, direction|
+            target.iter()
+                  .enumerate()
+                  .all(|(i, c)| grid.get(offset + direction * i) == Some(c));
 
         let directions =
             [-1, 0, 1].iter()
                       .flat_map(|&x| [-1, 0, 1].map(|y| Offset { x, y }))
+                      .filter(|&o| o != Offset { x: 0, y: 0 })
                       .collect::<Vec<_>>();
 
-        let count_xmas = |offset| directions.iter()
-                                            .map(|&d| is_xmas(offset, d))
-                                            .filter(|&b| b)
-                                            .count();
+        let count_matches = |target, offset|
+            directions.iter()
+                      .map(|&d| is_match(target, offset, d))
+                      .filter(|&b| b)
+                      .count();
         grid.iter()
-            .map(|(offset, _)| count_xmas(offset))
+            .map(|(offset, _)| count_matches(&['X', 'M', 'A', 'S'], offset))
             .sum()
     }
   
