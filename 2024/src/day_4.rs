@@ -28,29 +28,17 @@ mod grid {
 
         fn add(self, offset: Self) -> Self {
 
-            Self { x: self.x + offset.x,
-                   y: self.y + offset.y }
+            Self { x: self.x + offset.x, y: self.y + offset.y }
         }
     }
 
-    impl std::ops::Sub<Offset> for Offset {
+    impl std::ops::Mul<isize> for Offset {
 
         type Output = Self;
 
-        fn sub(self, offset: Self) -> Self {
+        fn mul(self, scalar: isize) -> Self {
 
-            self + Offset { x: -offset.x, y: -offset.y }
-        }
-    }
-
-    impl std::ops::Mul<usize> for Offset {
-
-        type Output = Self;
-
-        fn mul(self, scalar: usize) -> Self {
-
-            Self { x: self.x * scalar as isize,
-                   y: self.y * scalar as isize }
+            Self { x: self.x * scalar, y: self.y * scalar}
         }
     }
    
@@ -109,7 +97,7 @@ fn is_match(grid: &Grid<char>, target: &[char], offset: Offset, direction: Offse
     
     target.iter()
           .enumerate()
-          .all(|(i, c)| grid.get(offset + direction * i) == Some(c))
+          .all(|(i, c)| grid.get(offset + direction * i as isize) == Some(c))
 }
 
 mod part_1 {
@@ -152,7 +140,9 @@ mod part_2 {
         let grid = Grid::parse(input, Ok).unwrap();
 
         let is_mas = |offset, direction|
-            is_match(&grid, &['M', 'A', 'S'], offset - direction, direction);
+            is_match(&grid, &['M', 'A', 'S'],
+                     offset + direction * -1,
+                     direction);
 
         let is_mas_x = |offset|
                (   is_mas(offset, Offset { x:  1, y:  1 })
