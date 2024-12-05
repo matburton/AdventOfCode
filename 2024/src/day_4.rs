@@ -1,5 +1,3 @@
-use grid::Offset;
-
 
 const INPUT: &str = include_str!("../input/day_4.txt");
 
