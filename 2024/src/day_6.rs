@@ -1,6 +1,4 @@
 
-use std::collections::BTreeSet;
-
 const INPUT: &str = include_str!("../input/day_6.txt");
 
 const EXAMPLE: &str = "....#.....\n\
@@ -37,12 +35,9 @@ mod grid {
         pub fn parse(text: &str, parse_char: impl Fn(char) -> Result<T, String>)
             -> Result<Self, String> {
 
-            Ok(Self {
-                
-                cells: text.split('\n')
-                           .map(|l| l.chars().map(&parse_char).collect())
-                           .collect::<Result<Vec<_>, _>>()?
-            })
+            Ok(Self { cells: text.split('\n')
+                                 .map(|l| l.chars().map(&parse_char).collect())
+                                 .collect::<Result<Vec<_>, _>>()? })
         }
 
         pub fn get(&self, offset: Offset) -> Option<&T> {
@@ -65,6 +60,13 @@ mod grid {
         pub fn iter(&self) -> GridIterator<T> {
 
             GridIterator { grid: self, offset: Offset { x: -1, y: 0 } }
+        }
+
+        pub fn map<U>(&self, f: impl Fn(&T) -> U) -> Grid<U> {
+
+            Grid::<U> { cells: self.cells.iter()
+                                         .map(|v| v.iter().map(&f).collect())
+                                         .collect() }
         }
     }
 
@@ -108,7 +110,10 @@ fn get_route(grid: &Grid<char>, mut position: Position) -> Route {
 
     let mut positions = vec![position];
 
-    let mut visited = BTreeSet::from([position]);
+    let mut visted_mask = grid.map(|_| [false; 4]);
+
+    let to_index = |direction: Offset|
+        match direction.x { 0 => direction.y + 1, x => x + 2 } as usize;
 
     while let Some(&char) = grid.get(position.next().offset) {
 
@@ -123,10 +128,14 @@ fn get_route(grid: &Grid<char>, mut position: Position) -> Route {
 
             position = position.next();
 
-            if !visited.insert(position) {
-              
-                return Route { positions, loops: true };
-            }
+            let visited = visted_mask.get_mut(position.offset)
+                                     .unwrap()
+                                     .get_mut(to_index(position.direction))
+                                     .unwrap();
+
+            if *visited { return Route { positions, loops: true }; }
+
+            *visited = true;
         }
 
         positions.push(position);
@@ -146,6 +155,8 @@ fn get_start_at(grid: &Grid<char>) -> Position {
 mod part_1 {
 
     use super::*;
+
+    use std::collections::BTreeSet;
 
     fn get_result(input: &str) -> usize {
 
@@ -171,7 +182,10 @@ mod part_2 {
 
         let mut grid = Grid::parse(input, Ok).unwrap();
 
-        let mut already_blocked = BTreeSet::new();
+        let mut been_blocked = grid.map(|_| false);
+
+        let mut set_blocked = |o|
+            !std::mem::replace(been_blocked.get_mut(o).unwrap(), true);
 
         let (mut total_loops, mut last_blocked) = (0, None);
 
@@ -180,8 +194,7 @@ mod part_2 {
             let block_at = position.next().offset;
 
             match grid.get_mut(block_at) {
-                Some(c) if *c != '#'
-                        && already_blocked.insert(block_at) => *c = '#',
+                Some(c) if *c != '#' && set_blocked(block_at) => *c = '#',
                 _ => continue
             };
 
@@ -189,7 +202,7 @@ mod part_2 {
 
             last_blocked = Some(block_at);
 
-            if get_route(&grid, position).loops { total_loops +=1; }
+            if get_route(&grid, position).loops { total_loops += 1; }
         }
 
         total_loops
