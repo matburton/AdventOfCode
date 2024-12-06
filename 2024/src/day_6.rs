@@ -93,7 +93,7 @@ mod grid {
 
 use grid::*;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy)]
 struct Position { offset: Offset, direction: Offset }
 
 impl Position {
@@ -110,9 +110,9 @@ fn get_route(grid: &Grid<char>, mut position: Position) -> Route {
 
     let mut positions = vec![position];
 
-    let mut visted_mask = grid.map(|_| [false; 4]);
+    let mut visted_mask = grid.map(|_| [false; 4]); // Flag per direction
 
-    let to_index = |direction: Offset|
+    let to_index = |direction: Offset| // Returns 0..=3 for sane directions
         match direction.x { 0 => direction.y + 1, x => x + 2 } as usize;
 
     while let Some(&char) = grid.get(position.next().offset) {
@@ -184,7 +184,7 @@ mod part_2 {
 
         let mut been_blocked = grid.map(|_| false);
 
-        let mut set_blocked = |o|
+        let mut set_blocked = |o| // Returns false if already set
             !std::mem::replace(been_blocked.get_mut(o).unwrap(), true);
 
         let (mut total_loops, mut last_blocked) = (0, None);
