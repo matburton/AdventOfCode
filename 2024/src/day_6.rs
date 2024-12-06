@@ -53,9 +53,13 @@ mod grid {
                 .and_then(|(x, y)| self.cells.get(y).and_then(|v| v.get(x)))
         }
 
-        pub fn set(&mut self, offset: Offset, value: T) {
+        pub fn get_mut(&mut self, offset: Offset) -> Option<&mut T> {
 
-            self.cells[offset.y as usize][offset.x as usize] = value;
+            usize::try_from(offset.x)
+                .ok()
+                .zip(usize::try_from(offset.y).ok())
+                .and_then(|(x, y)| self.cells.get_mut(y)
+                                             .and_then(|v| v.get_mut(x)))
         }
         
         pub fn iter(&self) -> GridIterator<T> {
@@ -87,45 +91,69 @@ mod grid {
 
 use grid::*;
 
-fn get_visited(grid: &Grid<char>, start_at: Offset) -> (bool, BTreeSet<Offset>) {
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct Position { offset: Offset, direction: Offset }
 
-    let mut position = start_at;
+impl Position {
 
-    let mut direction = Offset { x: 0, y: -1 }; // Up
+    fn next(&self) -> Self {
 
-    let mut visited = BTreeSet::from([(position, direction)]);
+        Self { offset: self.offset + self.direction, ..*self }
+    }
+}
 
-    while let Some(&char) = grid.get(position + direction) {
+struct Route { positions: Vec<Position>, loops: bool }
+
+fn get_route(grid: &Grid<char>, mut position: Position) -> Route {
+
+    let mut positions = vec![position];
+
+    let mut visited = BTreeSet::from([position]);
+
+    while let Some(&char) = grid.get(position.next().offset) {
 
         if char == '#' { // Turn right (clockwise)
 
-            direction = Offset { x: -direction.y, y: direction.x }
+            let direction = Offset { x: -position.direction.y,
+                                     y:  position.direction.x };
+
+            position = Position { direction, ..position };
         }
         else { // Move forward (in current direction)
 
-            position = position + direction;
+            position = position.next();
 
-            if !visited.insert((position, direction)) {
-
-                return (true, BTreeSet::new()); // Looped
+            if !visited.insert(position) {
+              
+                return Route { positions, loops: true };
             }
         }
+
+        positions.push(position);
     }
 
-    (false, BTreeSet::from_iter(visited.iter().map(|(p, _)| *p)))
+    Route { positions, loops: false }
+}
+
+fn get_start_at(grid: &Grid<char>) -> Position {
+
+    Position {
+        offset: grid.iter().find(|(_, &c)| c == '^').unwrap().0,
+        direction: Offset { x: 0, y: -1 } // Up
+    }
 }
 
 mod part_1 {
 
-    use super::* ;
+    use super::*;
 
     fn get_result(input: &str) -> usize {
 
         let grid = Grid::parse(input, Ok).unwrap();
 
-        let start_at = grid.iter().find(|(_, &c)| c == '^').unwrap().0;
+        let positions = get_route(&grid, get_start_at(&grid)).positions;
 
-        get_visited(&grid, start_at).1.len()
+        BTreeSet::from_iter(positions.iter().map(|p| p.offset)).len()
     }
   
     #[test]
@@ -143,21 +171,25 @@ mod part_2 {
 
         let mut grid = Grid::parse(input, Ok).unwrap();
 
-        let start_at = grid.iter().find(|(_, &c)| c == '^').unwrap().0;
+        let mut already_blocked = BTreeSet::new();
 
-        let (mut total_loops, mut last_block_added) = (0, None);
+        let (mut total_loops, mut last_blocked) = (0, None);
 
-        for offset in get_visited(&grid, start_at).1 {
+        for position in get_route(&grid, get_start_at(&grid)).positions {
 
-            if offset == start_at { continue; }
+            let block_at = position.next().offset;
 
-            if let Some(o) = last_block_added { grid.set(o, '.'); }
+            match grid.get_mut(block_at) {
+                Some(c) if *c != '#'
+                        && already_blocked.insert(block_at) => *c = '#',
+                _ => continue
+            };
 
-            grid.set(offset, '#');
+            if let Some(o) = last_blocked { *grid.get_mut(o).unwrap() = '.'; }
 
-            last_block_added = Some(offset);
+            last_blocked = Some(block_at);
 
-            if get_visited(&grid, start_at).0 { total_loops +=1 ; }
+            if get_route(&grid, position).loops { total_loops +=1; }
         }
 
         total_loops
