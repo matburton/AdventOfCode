@@ -7,17 +7,18 @@ fn parse(input: &str) -> (Vec<(usize, usize)>, Vec<Vec<usize>>) {
 
     let sections = input.split("\n\n").collect::<Vec<_>>();
 
+    let parse_usizes = |seperator, line: &str|
+        line.split(seperator)
+            .map(|f| f.parse::<usize>().unwrap())
+            .collect::<Vec<_>>();
+
     let rules = sections[0].split('\n')
-                           .map(|l| l.split('|')
-                                     .map(|f| f.parse::<usize>().unwrap())
-                                     .collect::<Vec<_>>())
+                           .map(|l| parse_usizes('|', l))
                            .map(|v| (v[0], v[1]))
                            .collect::<Vec<_>>();
 
     let updates = sections[1].split('\n')
-                             .map(|l| l.split(',')
-                                       .map(|f| f.parse::<usize>().unwrap())
-                                       .collect::<Vec<_>>())
+                             .map(|l| parse_usizes(',', l))
                              .collect::<Vec<_>>();
     (rules, updates)
 }
@@ -54,7 +55,7 @@ mod part_1 {
 
 mod part_2 {
 
-    use std::collections::{BTreeMap, BTreeSet};
+    use std::collections::{ BTreeMap, BTreeSet };
 
     use super::*;
 
