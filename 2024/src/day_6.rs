@@ -1,4 +1,6 @@
 
+use std::collections::BTreeSet;
+
 const INPUT: &str = include_str!("../input/day_6.txt");
 
 const EXAMPLE: &str = "....#.....\n\
@@ -50,6 +52,11 @@ mod grid {
                 .zip(usize::try_from(offset.y).ok())
                 .and_then(|(x, y)| self.cells.get(y).and_then(|v| v.get(x)))
         }
+
+        pub fn set(&mut self, offset: Offset, value: T) {
+
+            self.cells[offset.y as usize][offset.x as usize] = value;
+        }
         
         pub fn iter(&self) -> GridIterator<T> {
 
@@ -78,37 +85,47 @@ mod grid {
     }
 }
 
+use grid::*;
+
+fn get_visited(grid: &Grid<char>, start_at: Offset) -> (bool, BTreeSet<Offset>) {
+
+    let mut position = start_at;
+
+    let mut direction = Offset { x: 0, y: -1 }; // Up
+
+    let mut visited = BTreeSet::from([(position, direction)]);
+
+    while let Some(&char) = grid.get(position + direction) {
+
+        if char == '#' { // Turn right (clockwise)
+
+            direction = Offset { x: -direction.y, y: direction.x }
+        }
+        else { // Move forward (in current direction)
+
+            position = position + direction;
+
+            if !visited.insert((position, direction)) {
+
+                return (true, BTreeSet::new()); // Looped
+            }
+        }
+    }
+
+    (false, BTreeSet::from_iter(visited.iter().map(|(p, _)| *p)))
+}
+
 mod part_1 {
 
-    use std::collections::BTreeSet;
-
-    use super::{ *, grid::* };
+    use super::* ;
 
     fn get_result(input: &str) -> usize {
 
         let grid = Grid::parse(input, Ok).unwrap();
 
-        let mut position = grid.iter().find(|(_, &c)| c == '^').unwrap().0;
+        let start_at = grid.iter().find(|(_, &c)| c == '^').unwrap().0;
 
-        let mut direction = Offset { x: 0, y: -1 }; // Up
-
-        let mut offsets_visited = BTreeSet::from([position]);
-
-        while let Some(&char) = grid.get(position + direction) {
-
-            if char == '#' { // Turn right (clockwise)
-
-                direction = Offset { x: -direction.y, y: direction.x }
-            }
-            else { // Move forward (in current direction)
-
-                position = position + direction;
-
-                offsets_visited.insert(position);
-            }
-        }
-
-        offsets_visited.len()
+        get_visited(&grid, start_at).1.len()
     }
   
     #[test]
@@ -116,4 +133,39 @@ mod part_1 {
     
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 5239); }
+}
+
+mod part_2 {
+
+    use super::*;
+
+    fn get_result(input: &str) -> usize {
+
+        let mut grid = Grid::parse(input, Ok).unwrap();
+
+        let start_at = grid.iter().find(|(_, &c)| c == '^').unwrap().0;
+
+        let (mut total_loops, mut last_block_added) = (0, None);
+
+        for offset in get_visited(&grid, start_at).1 {
+
+            if offset == start_at { continue; }
+
+            if let Some(o) = last_block_added { grid.set(o, '.'); }
+
+            grid.set(offset, '#');
+
+            last_block_added = Some(offset);
+
+            if get_visited(&grid, start_at).0 { total_loops +=1 ; }
+        }
+
+        total_loops
+    }
+
+    #[test]
+    fn example() { assert_eq!(get_result(EXAMPLE), 6); }
+    
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT), 1753); }
 }
