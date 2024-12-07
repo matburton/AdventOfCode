@@ -37,7 +37,7 @@ mod grid {
 
             Ok(Self { cells: text.split('\n')
                                  .map(|l| l.chars().map(&parse_char).collect())
-                                 .collect::<Result<Vec<_>, _>>()? })
+                                 .collect::<Result<_, _>>()? })
         }
 
         pub fn get(&self, offset: Offset) -> Option<&T> {

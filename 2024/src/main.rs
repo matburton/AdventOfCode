@@ -14,4 +14,6 @@ mod day_5;
 
 mod day_6;
 
+mod day_7;
+
 fn main() {}
