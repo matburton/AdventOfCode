@@ -32,10 +32,10 @@ fn is_possible(target: usize,
 
     if series.is_empty() { return target == total; }
 
-    operators.iter().any(|o| {
-        
-        is_possible(target, o(total, series[0]), &series[1 ..], operators)
-    })
+    operators.iter().any(|o| is_possible(target,
+                                         o(total, series[0]),
+                                         &series[1 ..],
+                                         operators))
 }
 
 mod part_1 {
@@ -60,18 +60,16 @@ mod part_2 {
 
     use super::*;
 
-    fn base_10_digits(n: usize) -> usize {
+    fn prefix(a: usize, b: usize) -> usize {
 
-        match n { 0 ..= 9 => 1, _ => base_10_digits(n / 10) + 1 }
+        match b { 0 ..= 9 => a * 10, _ => prefix(a * 10, b / 10) }
     }
 
     fn get_result(input: &str) -> usize {
 
-        let operators = [
-            |a, b| a + b,
-            |a, b| a * b,
-            |a, b| (0 .. base_10_digits(b)).fold(a, |a, _| a * 10) + b
-        ];
+        let operators = [|a, b| a + b,
+                         |a, b| a * b,
+                         |a, b| prefix(a, b) + b];
 
         super::get_result(input, &operators)
     }
