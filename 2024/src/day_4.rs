@@ -49,7 +49,7 @@ mod grid {
                 
                 cells: text.split('\n')
                            .map(|l| l.chars().map(&parse_char).collect())
-                           .collect::<Result<Vec<_>, _>>()?
+                           .collect::<Result<_, _>>()?
             })
         }
 
