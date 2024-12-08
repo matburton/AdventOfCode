@@ -102,30 +102,39 @@ mod grid {
     }
 }
 
+use grid::*;
+
+fn get_result(input: &str,
+              add_antis: impl Fn(&mut Grid<bool>, Offset, Offset)) -> usize {
+
+    let antenna_grid = Grid::parse(input, Ok).unwrap();
+
+    let mut antinode_grid = antenna_grid.map(|_| false);
+
+    for (offset_a, &freq) in antenna_grid.iter().filter(|(_, &f)| f != '.') {
+
+        for (offset_b, _) in antenna_grid.iter()
+                                         .filter(|(o, &f)| o != &offset_a
+                                                        && f == freq) {
+
+            add_antis(&mut antinode_grid, offset_a, offset_b - offset_a);
+            add_antis(&mut antinode_grid, offset_b, offset_a - offset_b);
+        }
+    }
+
+    antinode_grid.iter().filter(|(_, &b)| b).count()
+}
+
 mod part_1 {
 
-    use super::{ *, grid::* };
+    use super::*;
 
     fn get_result(input: &str) -> usize {
 
-        let antenna_grid = Grid::parse(input, Ok).unwrap();
+        super::get_result(input, |grid, start, diff| {
 
-        let mut antinode_grid = antenna_grid.map(|_| false);
-
-        let mut antinode_at = |o|
-            if let Some(c) = antinode_grid.get_mut(o) { *c = true; };
-
-        for (offset_a, &freq) in antenna_grid.iter().filter(|(_, &f)| f != '.') {
-
-            for (offset_b, _) in antenna_grid.iter()
-                                             .filter(|(o, &f)| o != &offset_a
-                                                            && f == freq) {
-                antinode_at(offset_a * 2 - offset_b);
-                antinode_at(offset_b * 2 - offset_a);
-            }
-        }
-
-        antinode_grid.iter().filter(|(_, &b)| b).count()
+            if let Some(c) = grid.get_mut(start - diff) { *c = true; }
+        })
     }
   
     #[test]
@@ -133,4 +142,28 @@ mod part_1 {
     
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 371); }
+}
+
+mod part_2 {
+
+    use super::{ *, grid::* };
+
+    fn get_result(input: &str) -> usize {
+
+        super::get_result(input, |grid, mut start, diff| {
+
+            while let Some(c) = grid.get_mut(start) {
+
+                *c = true;
+
+                start = start - diff;
+            }
+        })
+    }
+  
+    #[test]
+    fn example() { assert_eq!(get_result(EXAMPLE), 34); }
+    
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT), 1229); }
 }
