@@ -30,16 +30,6 @@ mod grid {
             Self { x: self.x - offset.x, y: self.y - offset.y }
         }
     }
-
-    impl std::ops::Mul<isize> for Offset {
-
-        type Output = Self;
-
-        fn mul(self, scalar: isize) -> Self {
-
-            Self { x: self.x * scalar, y: self.y * scalar}
-        }
-    }
    
     impl<T> Grid<T> {
         
