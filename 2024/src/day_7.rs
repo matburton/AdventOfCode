@@ -13,6 +13,21 @@ const EXAMPLE: &str = "190: 10 19\n\
                        21037: 9 7 18 13\n\
                        292: 11 6 16 20";
 
+fn per_core<T, U>(items: &[T],
+                  reducer: impl Fn(U, U) -> U,
+                  start: impl Fn(&[T]) -> thread::JoinHandle<U>) -> U {
+
+    let thread_count = thread::available_parallelism().unwrap();
+
+    items.chunks(usize::max(items.len() / thread_count, 1))
+         .map(start)
+         .collect::<Vec<_>>()
+         .into_iter()
+         .map(|t| t.join().unwrap())
+         .reduce(reducer)
+         .unwrap()
+}
+
 type Operator = fn(usize, usize) -> usize;
 
 fn get_result(input: &str, operators: Box<[Operator]>) -> usize {
@@ -25,11 +40,7 @@ fn get_result(input: &str, operators: Box<[Operator]>) -> usize {
                                    .collect::<Vec<_>>())
                          .collect::<Vec<_>>();
 
-    let thread_count = thread::available_parallelism().unwrap();
-
-    let threads = equations
-                 .chunks(usize::max(equations.len() / thread_count, 1))
-                 .map(|equations: &[Vec<usize>]| {
+    per_core(&equations, |a, b| a + b, |equations| {
 
         let (equations, operators) = (Vec::from(equations), operators.clone());
 
@@ -40,12 +51,7 @@ fn get_result(input: &str, operators: Box<[Operator]>) -> usize {
                      .map(|v| v[0])
                      .sum::<usize>()
         })
-    });
-
-    threads.collect::<Vec<_>>()
-           .into_iter()
-           .map(|t| t.join().unwrap())
-           .sum()
+    })
 }
 
 fn is_possible(target: usize,
