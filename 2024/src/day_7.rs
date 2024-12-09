@@ -1,4 +1,6 @@
 
+use std::thread;
+
 const INPUT: &str = include_str!("../input/day_7.txt");
 
 const EXAMPLE: &str = "190: 10 19\n\
@@ -11,22 +13,45 @@ const EXAMPLE: &str = "190: 10 19\n\
                        21037: 9 7 18 13\n\
                        292: 11 6 16 20";
 
-fn get_result(input: &str,
-              operators: &[impl Fn(usize, usize) -> usize]) -> usize {
+type Operator = fn(usize, usize) -> usize;
 
-    input.split('\n')
-         .map(|l| l.split(' ')
-                   .map(|f| f.trim_end_matches(':').parse::<usize>().unwrap())
-                   .collect::<Vec<_>>())
-         .filter(|v| is_possible(v[0], v[1], &v[2 ..], operators))
-         .map(|v| v[0])
-         .sum()
+fn get_result(input: &str, operators: Box<[Operator]>) -> usize {
+
+    let equations = input.split('\n')
+                         .map(|l| l.split(' ')
+                                   .map(|f| f.trim_end_matches(':')
+                                   .parse::<usize>()
+                                   .unwrap())
+                                   .collect::<Vec<_>>())
+                         .collect::<Vec<_>>();
+
+    let thread_count = thread::available_parallelism().unwrap();
+
+    let threads = equations
+                 .chunks(usize::max(equations.len() / thread_count, 1))
+                 .map(|equations: &[Vec<usize>]| {
+
+        let (equations, operators) = (Vec::from(equations), operators.clone());
+
+        thread::spawn(move || {
+
+            equations.iter()
+                     .filter(|v| is_possible(v[0], v[1], &v[2 ..], &operators))
+                     .map(|v| v[0])
+                     .sum::<usize>()
+        })
+    });
+
+    threads.collect::<Vec<_>>()
+           .into_iter()
+           .map(|t| t.join().unwrap())
+           .sum()
 }
 
 fn is_possible(target: usize,
                total: usize,
                series: &[usize],
-               operators: &[impl Fn(usize, usize) -> usize]) -> bool {
+               operators: &[fn(usize, usize) -> usize]) -> bool {
 
     if total > target { return false; }
 
@@ -44,9 +69,7 @@ mod part_1 {
 
     fn get_result(input: &str) -> usize {
 
-        let operators = [|a, b| a + b, |a, b| a * b];
-
-        super::get_result(input, &operators)
+        super::get_result(input, Box::new([|a, b| a + b, |a, b| a * b]))
     }
   
     #[test]
@@ -67,11 +90,10 @@ mod part_2 {
 
     fn get_result(input: &str) -> usize {
 
-        let operators = [|a, b| a + b,
-                         |a, b| a * b,
-                         |a, b| prefix(a, b) + b];
-
-        super::get_result(input, &operators)
+        super::get_result(input,
+                          Box::new([|a, b| a + b,
+                                    |a, b| a * b,
+                                    |a, b| prefix(a, b) + b]))
     }
   
     #[test]
