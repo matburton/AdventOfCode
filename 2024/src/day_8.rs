@@ -136,7 +136,7 @@ mod part_1 {
 
 mod part_2 {
 
-    use super::{ *, grid::* };
+    use super::*;
 
     fn get_result(input: &str) -> usize {
 
