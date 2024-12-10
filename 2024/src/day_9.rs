@@ -3,26 +3,26 @@ const INPUT: &str = include_str!("../input/day_9.txt");
 
 const EXAMPLE: &str = "2333133121414131402";
 
-struct Block { id: u16, file_len: u16, free_len: u16 }
-
-fn parse(input: &str) -> Vec<Block> {
-
-    let to_block = |(id, (file_len, free_len))|
-        Block { id, file_len, free_len };
-
-    input.chars()
-         .map(|c| c.to_digit(10).unwrap() as u16)
-         .collect::<Vec<_>>()
-         .chunks(2)
-         .map(|c| (c[0], *c.get(1).unwrap_or(&0)))
-         .enumerate()
-         .map(|(i, b)| to_block((i as u16, b)))
-         .collect()
-}
-
 mod part_1 {
 
     use super::*;
+
+    struct Block { id: u16, file_len: u16, free_len: u16 }
+
+    fn parse(input: &str) -> Vec<Block> {
+
+        let to_block = |(id, (file_len, free_len))|
+            Block { id, file_len, free_len };
+
+        input.chars()
+             .map(|c| c.to_digit(10).unwrap() as u16)
+             .collect::<Vec<_>>()
+             .chunks(2)
+             .map(|c| (c[0], *c.get(1).unwrap_or(&0)))
+             .enumerate()
+             .map(|(i, b)| to_block((i as u16, b)))
+             .collect()
+    }
 
     fn get_result(input: &str) -> usize {
 
@@ -79,56 +79,85 @@ mod part_2 {
 
     use super::*;
 
-    fn checksum(blocks: &[Block]) -> usize {
+    type Run = Option<std::ops::Range<usize>>;
 
-        let (mut checksum, mut position) = (0, 0);
+    fn file_from_back(disk_map: &[Option<u16>]) -> Run {
 
-        for block in blocks {
+        if let Some(i) = disk_map.iter().rev().position(|id| id.is_some()) {
 
-            let position_range = position .. position + block.file_len as usize;
+            let end_index = disk_map.len() - i;
 
-            checksum += block.id as usize * position_range.sum::<usize>();
+            let id = disk_map[end_index - 1];
 
-            position += block.file_len as usize + block.free_len as usize;
+            let len = disk_map[0 .. end_index].iter()
+                                              .rev()
+                                              .take_while(|&&i| i == id)
+                                              .count();
+
+            return Some(end_index - len .. end_index);
         }
 
-        checksum
+        None                  
+    }
+
+    fn free_from_front(disk_map: &[Option<u16>], len: usize) -> Run {
+
+        let mut index = 0;
+
+        while let Some(i) = disk_map[index ..].iter()
+                                              .position(|id| id.is_none()) {
+
+            if index + i + len > disk_map.len() { return None; }
+
+            let range = index + i .. index + i + len;
+
+            if disk_map[range.clone()].iter().all(|id| id.is_none()) {
+
+                return Some(range);
+            }
+
+            index = range.end;
+        }
+
+        None
     }
 
     fn get_result(input: &str) -> usize {
 
-        let mut disk_map = parse(input);
+        let expand = |(id, (file_len, free_len))| {
 
-        let mut back_index = disk_map.len() - 1;
+            let free_iter = std::iter::repeat_n(None, free_len);
 
-        while back_index > 0 {
+            std::iter::repeat_n(Some(id as u16), file_len).chain(free_iter)
+        };
 
-            let back_file_len = disk_map[back_index].file_len;
+        let mut disk_map = input.chars()
+                                .map(|c| c.to_digit(10).unwrap() as usize)
+                                .collect::<Vec<_>>()
+                                .chunks(2)
+                                .map(|c| (c[0], *c.get(1).unwrap_or(&0)))
+                                .enumerate()
+                                .flat_map(expand)
+                                .collect::<Vec<_>>();
 
-            let front_find = disk_map[0 .. back_index]
-                            .iter()
-                            .position(|b| b.free_len >= back_file_len);
+        let mut prior_index = disk_map.len();
 
-            if let Some(front_index) = front_find {
+        while let Some(file_run) = file_from_back(&disk_map[0 .. prior_index]) {
 
-                let mut back_block = disk_map.remove(back_index);
+            prior_index = file_run.start;
 
-                disk_map[back_index - 1].free_len += back_block.file_len
-                                                   + back_block.free_len;
+            if let Some(free_run) = free_from_front(&disk_map[0 .. file_run.start],
+                                                    file_run.len()) {
 
-                let front_block = &mut disk_map[front_index];
+                disk_map.copy_within(file_run.clone(), free_run.start);
 
-                back_block.free_len = front_block.free_len
-                                    - back_block.file_len;
-
-                front_block.free_len = 0;
-
-                disk_map.insert(front_index + 1, back_block);
+                disk_map[file_run].fill(None);
             }
-            else { back_index -= 1; }
         }
 
-        checksum(&disk_map)
+        disk_map.iter()
+                .enumerate()
+                .fold(0, |a, (index, o)| o.map_or(a, |id| a + id as usize * index))
     }
 
     #[test]
