@@ -105,14 +105,11 @@ mod part_2 {
 
             let back_file_len = disk_map[back_index].file_len;
 
-            let found = disk_map
-                       .iter()
-                       .enumerate()
-                       .take_while(|&(i, _)| i < back_index)
-                       .find(|(_, b)| b.free_len >= back_file_len)
-                       .map(|(i, _)| i);
+            let front_find = disk_map.make_contiguous()[0 .. back_index]
+                                     .iter()
+                                     .position(|b| b.free_len >= back_file_len);
 
-            if let Some(front_index) = found {
+            if let Some(front_index) = front_find {
 
                 let mut back_block = disk_map.remove(back_index).unwrap();
 
