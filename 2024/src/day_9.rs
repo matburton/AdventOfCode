@@ -3,17 +3,15 @@ const INPUT: &str = include_str!("../input/day_9.txt");
 
 const EXAMPLE: &str = "2333133121414131402";
 
-use std::collections::VecDeque;
+struct Block { id: u16, file_len: u16, free_len: u16 }
 
-struct Block { id: u16, file_len: u8, free_len: u8 }
-
-fn parse(input: &str) -> VecDeque<Block> {
+fn parse(input: &str) -> Vec<Block> {
 
     let to_block = |(id, (file_len, free_len))|
         Block { id, file_len, free_len };
 
     input.chars()
-         .map(|c| c.to_digit(10).unwrap() as u8)
+         .map(|c| c.to_digit(10).unwrap() as u16)
          .collect::<Vec<_>>()
          .chunks(2)
          .map(|c| (c[0], *c.get(1).unwrap_or(&0)))
@@ -28,7 +26,7 @@ mod part_1 {
 
     fn get_result(input: &str) -> usize {
 
-        let mut disk_map = parse(input);
+        let mut disk_map = std::collections::VecDeque::from(parse(input));
 
         let (mut checksum, mut position) = (0, 0);
 
@@ -107,13 +105,13 @@ mod part_2 {
 
             let back_file_len = disk_map[back_index].file_len;
 
-            let front_find = disk_map.make_contiguous()[0 .. back_index]
-                                     .iter()
-                                     .position(|b| b.free_len >= back_file_len);
+            let front_find = disk_map[0 .. back_index]
+                            .iter()
+                            .position(|b| b.free_len >= back_file_len);
 
             if let Some(front_index) = front_find {
 
-                let mut back_block = disk_map.remove(back_index).unwrap();
+                let mut back_block = disk_map.remove(back_index);
 
                 disk_map[back_index - 1].free_len += back_block.file_len
                                                    + back_block.free_len;
@@ -130,7 +128,7 @@ mod part_2 {
             else { back_index -= 1; }
         }
 
-        checksum(disk_map.make_contiguous())
+        checksum(&disk_map)
     }
 
     #[test]
