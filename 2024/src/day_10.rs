@@ -73,16 +73,17 @@ mod grid {
     }
 }
 
+use grid::*;
+
+const DIRECTIONS: [Offset; 4] = [Offset { x: -1, y:  0 },
+                                 Offset { x:  0, y: -1 },
+                                 Offset { x:  1, y:  0 },
+                                 Offset { x:  0, y:  1 }];
 mod part_1 {
 
     use std::collections::BTreeSet;
 
-    use super::{ *, grid::* };
-
-    const DIRECTIONS: [Offset; 4] = [Offset { x: -1, y:  0 },
-                                     Offset { x:  0, y: -1 },
-                                     Offset { x:  1, y:  0 },
-                                     Offset { x:  0, y:  1 }];
+    use super::*;
 
     fn add_trail_ends(trail_ends: &mut BTreeSet<Offset>,
                       offset: Offset,
@@ -116,7 +117,7 @@ mod part_1 {
         };
 
         grid.iter()
-            .map(|(o, c)| match c { 0 => score_offset(o), _ => 0 })
+            .map(|(o, h)| match h { 0 => score_offset(o), _ => 0 })
             .sum()
     }
 
@@ -125,4 +126,35 @@ mod part_1 {
     
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 582); }
+}
+
+mod part_2 {
+
+    use super::*;
+
+    fn rate(offset: Offset, next_height: u32, grid: &Grid<u32>) -> usize {
+
+        if next_height == 10 { return 1; }
+
+        DIRECTIONS.iter()
+                  .filter(|&&d| grid.get(offset + d) == Some(&next_height))
+                  .map(|&d| rate(offset + d, next_height + 1, grid))
+                  .sum()
+    }
+
+    fn get_result(input: &str) -> usize {
+
+        let grid = Grid::parse(input, |c| Ok(c.to_digit(10).unwrap())).unwrap();
+
+        grid.iter()
+            .filter(|(_, &h)| h == 0)
+            .map(|(o, _)| rate(o, 1, &grid))
+            .sum()
+    }
+
+    #[test]
+    fn example() { assert_eq!(get_result(EXAMPLE), 81); }
+    
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT), 1302); }
 }
