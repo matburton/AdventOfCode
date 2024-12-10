@@ -5,7 +5,7 @@ const EXAMPLE: &str = "2333133121414131402";
 
 use std::collections::VecDeque;
 
-struct Block { id: usize, file_len: usize, free_len: usize }
+struct Block { id: u16, file_len: u8, free_len: u8 }
 
 fn parse(input: &str) -> VecDeque<Block> {
 
@@ -13,12 +13,12 @@ fn parse(input: &str) -> VecDeque<Block> {
         Block { id, file_len, free_len };
 
     input.chars()
-         .map(|c| c.to_digit(10).unwrap() as usize)
+         .map(|c| c.to_digit(10).unwrap() as u8)
          .collect::<Vec<_>>()
          .chunks(2)
          .map(|c| (c[0], *c.get(1).unwrap_or(&0)))
          .enumerate()
-         .map(to_block)
+         .map(|(i, b)| to_block((i as u16, b)))
          .collect()
 }
 
@@ -34,9 +34,11 @@ mod part_1 {
 
         let mut checksum_add = |id, file_len| {
 
-            checksum += id * (position .. position + file_len).sum::<usize>();
+            let position_range = position .. position + file_len as usize;
 
-            position += file_len;
+            checksum += id as usize * position_range.sum::<usize>();
+
+            position += file_len as usize;
         };
  
         while let Some(mut front_block) = disk_map.pop_front() {
@@ -85,11 +87,11 @@ mod part_2 {
 
         for block in blocks {
 
-            let position_range = position .. position + block.file_len;
+            let position_range = position .. position + block.file_len as usize;
 
-            checksum += block.id * position_range.sum::<usize>();
+            checksum += block.id as usize * position_range.sum::<usize>();
 
-            position += block.file_len + block.free_len;
+            position += block.file_len as usize + block.free_len as usize;
         }
 
         checksum
