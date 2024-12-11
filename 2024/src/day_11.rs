@@ -1,8 +1,6 @@
 
 const INPUT: &str = "28591 78 0 3159881 4254 524155 598 1";
 
-const EXAMPLE: &str = "125 17";
-
 type Cache = std::collections::BTreeMap<(usize, usize), usize>;
 
 fn digit_count(num: usize) -> u32 {
@@ -19,7 +17,7 @@ fn split_digits(num: usize, digit_count: u32) -> (usize, usize) {
     (front_digits, num - front_digits * split_factor)
 }
 
-fn split_stone(stone: usize, blinks: usize, cache: &mut Cache) -> usize {
+fn count_stones(stone: usize, blinks: usize, cache: &mut Cache) -> usize {
 
     if blinks == 0 { return 1; }
 
@@ -27,7 +25,7 @@ fn split_stone(stone: usize, blinks: usize, cache: &mut Cache) -> usize {
 
     let count = {
 
-        if stone == 0 { return split_stone(1, blinks - 1, cache); }
+        if stone == 0 { return count_stones(1, blinks - 1, cache); }
 
         let digit_count = digit_count(stone);
 
@@ -35,10 +33,10 @@ fn split_stone(stone: usize, blinks: usize, cache: &mut Cache) -> usize {
 
             let (stone_a, stone_b) = split_digits(stone, digit_count);
 
-              split_stone(stone_a, blinks - 1, cache)
-            + split_stone(stone_b, blinks - 1, cache)
+              count_stones(stone_a, blinks - 1, cache)
+            + count_stones(stone_b, blinks - 1, cache)
         }
-        else { split_stone(stone * 2024, blinks - 1, cache) }
+        else { count_stones(stone * 2024, blinks - 1, cache) }
     };
 
     cache.insert((stone, blinks), count);
@@ -46,41 +44,31 @@ fn split_stone(stone: usize, blinks: usize, cache: &mut Cache) -> usize {
     count
 }
 
+fn get_result(input: &str, blinks: usize) -> usize {
+
+    let mut cache = Cache::new();
+
+    input.split(' ')
+         .map(|f| f.parse::<usize>().unwrap())
+         .map(|s| count_stones(s, blinks, &mut cache))
+         .sum()
+}
+
 mod part_1 {
 
     use super::*;
 
-    fn get_result(input: &str) -> usize {
-
-        let mut cache = Cache::new();
-
-        input.split(' ')
-             .map(|f| f.parse::<usize>().unwrap())
-             .map(|s| split_stone(s, 25, &mut cache))
-             .sum()
-    }
-
     #[test]
-    fn example() { assert_eq!(get_result(EXAMPLE), 55312); }
+    fn example() { assert_eq!(get_result("125 17", 25), 55312); }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT), 220722); }
+    fn real() { assert_eq!(get_result(INPUT, 25), 220722); }
 }
 
 mod part_2 {
 
     use super::*;
-
-    fn get_result(input: &str) -> usize {
-
-        let mut cache = Cache::new();
-
-        input.split(' ')
-             .map(|f| f.parse::<usize>().unwrap())
-             .map(|s| split_stone(s, 75, &mut cache))
-             .sum()
-    }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT), 261952051690787); }
+    fn real() { assert_eq!(get_result(INPUT, 75), 261952051690787); }
 }
