@@ -8,13 +8,13 @@ fn digit_count(num: usize) -> u32 {
     match num { ..= 9 => 1, _ => digit_count(num / 10) + 1 }
 }
 
-fn split_digits(num: usize, digit_count: u32) -> (usize, usize) {
+fn split_digits(num: usize, front_digits: u32) -> [usize; 2] {
 
-    let split_factor = usize::pow(10, digit_count / 2);
+    let split_factor = usize::pow(10, front_digits);
 
     let front_digits = num / split_factor;
 
-    (front_digits, num - front_digits * split_factor)
+    [front_digits, num - front_digits * split_factor]
 }
 
 fn count_stones(stone: usize, blinks: usize, cache: &mut Cache) -> usize {
@@ -23,20 +23,19 @@ fn count_stones(stone: usize, blinks: usize, cache: &mut Cache) -> usize {
 
     if let Some(&count) = cache.get(&(stone, blinks)) { return count; }
 
+    let mut count_stones = |s| count_stones(s, blinks - 1, cache);
+
     let count = {
 
-        if stone == 0 { return count_stones(1, blinks - 1, cache); }
+        if stone == 0 { return count_stones(1); }
 
         let digit_count = digit_count(stone);
 
         if digit_count % 2 == 0 {
 
-            let (stone_a, stone_b) = split_digits(stone, digit_count);
-
-              count_stones(stone_a, blinks - 1, cache)
-            + count_stones(stone_b, blinks - 1, cache)
+            split_digits(stone, digit_count / 2).map(count_stones).iter().sum()
         }
-        else { count_stones(stone * 2024, blinks - 1, cache) }
+        else { count_stones(stone * 2024) }
     };
 
     cache.insert((stone, blinks), count);
