@@ -140,32 +140,28 @@ mod part_1 {
 
         let mut fences = 0;
 
-        for y in y_min ..= y_max {
+        let mut add_fences = |range, to_offset: &dyn Fn(isize) -> Offset| {
 
             let mut inside = false;
 
-            for x in x_min ..= x_max + 1 {
+            for index in range {
 
-                let in_region = region.contains(&Offset { x, y });
+                let in_region = region.contains(&to_offset(index));
 
                 if inside != in_region { fences += 1; }
 
                 inside = in_region;
             }
+        };
+
+        for y in y_min ..= y_max {
+
+            add_fences(x_min ..= x_max + 1, &|x| Offset { x, y });
         }
 
         for x in x_min ..= x_max {
 
-            let mut inside = false;
-
-            for y in y_min ..= y_max + 1 {
-
-                let in_region = region.contains(&Offset { x, y });
-
-                if inside != in_region { fences += 1; }
-
-                inside = in_region;
-            }
+            add_fences(y_min ..= y_max + 1, &|y| Offset { x, y });
         }
 
         fences
