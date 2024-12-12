@@ -29,13 +29,13 @@ fn count_stones(stone: usize, blinks: usize, cache: &mut Cache) -> usize {
 
         if stone == 0 { return count_stones(1); }
 
-        let digit_count = digit_count(stone);
+        match digit_count(stone) {
 
-        if digit_count % 2 == 0 {
-
-            split_digits(stone, digit_count / 2).map(count_stones).iter().sum()
+            d if d % 2 == 0 => split_digits(stone, d / 2).map(count_stones)
+                                                         .iter()
+                                                         .sum(),
+            _ => count_stones(stone * 2024)
         }
-        else { count_stones(stone * 2024) }
     };
 
     cache.insert((stone, blinks), count);
