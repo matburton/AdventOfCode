@@ -48,47 +48,47 @@ impl Machine {
     }
 }
 
+fn button_line_intersection(m: &Machine) -> Offset {
+
+    let numerator_factor = m.prize.x * m.buttons[1].offset.y
+                         - m.prize.y * m.buttons[1].offset.x;
+
+    let denominator = m.buttons[0].offset.x * m.buttons[1].offset.y
+                    - m.buttons[0].offset.y * m.buttons[1].offset.x;
+
+    Offset { x: m.buttons[0].offset.x * numerator_factor / denominator,
+             y: m.buttons[0].offset.y * numerator_factor / denominator }
+}
+
+fn min_tokens_to_prize(m: &Machine) -> Option<isize> {
+
+    let intersection = button_line_intersection(m);
+
+    if intersection.x % m.buttons[0].offset.x != 0
+    || intersection.y % m.buttons[0].offset.y != 0
+    || (m.prize.x - intersection.x) % m.buttons[1].offset.x != 0
+    || (m.prize.y - intersection.y) % m.buttons[1].offset.y != 0 {
+
+        return None;
+    }
+
+    let tokens = [
+
+        intersection.x
+        * m.buttons[0].tokens
+        / m.buttons[0].offset.x,
+
+        (m.prize.x - intersection.x)
+        * m.buttons[1].tokens
+        / m.buttons[1].offset.x
+    ];
+
+    Some(tokens.iter().sum())
+}
+
 mod part_1 {
 
     use super::*;
-
-    fn button_line_intersection(m: &Machine) -> Offset {
-
-        let numerator_factor = m.prize.x * m.buttons[1].offset.y
-                             - m.prize.y * m.buttons[1].offset.x;
-
-        let denominator = m.buttons[0].offset.x * m.buttons[1].offset.y
-                        - m.buttons[0].offset.y * m.buttons[1].offset.x;
-
-        Offset { x: m.buttons[0].offset.x * numerator_factor / denominator,
-                 y: m.buttons[0].offset.y * numerator_factor / denominator }
-    }
-
-    fn min_tokens_to_prize(m: &Machine) -> Option<isize> {
-
-        let intersection = button_line_intersection(m);
-
-        if intersection.x % m.buttons[0].offset.x != 0
-        || intersection.y % m.buttons[0].offset.y != 0
-        || (m.prize.x - intersection.x) % m.buttons[1].offset.x != 0
-        || (m.prize.y - intersection.y) % m.buttons[1].offset.y != 0 {
-
-            return None;
-        }
-
-        let tokens = [
-
-            intersection.x
-            * m.buttons[0].tokens
-            / m.buttons[0].offset.x,
-
-            (m.prize.x - intersection.x)
-            * m.buttons[1].tokens
-            / m.buttons[1].offset.x
-        ];
-
-        Some(tokens.iter().sum())
-    }
 
     fn get_result(input: &str) -> isize {
 
@@ -102,5 +102,26 @@ mod part_1 {
     fn example() { assert_eq!(get_result(EXAMPLE), 480); }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT), 0); }
+    fn real() { assert_eq!(get_result(INPUT), 29187); }
+}
+
+mod part_2 {
+
+    use super::*;
+
+    fn get_result(input: &str) -> isize {
+
+        let rig = |m: &mut Machine|
+            m.prize = Offset { x: m.prize.x + 10000000000000,
+                               y: m.prize.y + 10000000000000 };
+
+        input.split("\n\n")
+             .map(Machine::parse)
+             .map(|mut m| { rig(&mut m); m })
+             .filter_map(|m| min_tokens_to_prize(&m))
+             .sum()
+    }
+    
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT), 99968222587852); }
 }
