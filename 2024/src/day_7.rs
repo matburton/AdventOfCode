@@ -11,22 +11,58 @@ const EXAMPLE: &str = "190: 10 19\n\
                        21037: 9 7 18 13\n\
                        292: 11 6 16 20";
 
+pub trait PerCore<T> {
+
+    fn map_per_core<F, U>(&mut self, f: F) -> Vec<U>
+        where F: 'static + Fn(&T) -> U + Clone + Send,
+              U: 'static + Send;
+}
+
+impl<T, I> PerCore<T> for I
+    where I: Iterator<Item = T>,
+          T: 'static + Clone + Send {
+
+    fn map_per_core<F, U>(&mut self, f: F) -> Vec<U>
+        where F: 'static + Fn(&T) -> U + Clone + Send,
+              U: 'static + Send {
+
+        let collected = self.collect::<Vec<_>>();
+
+        let core_count = std::thread::available_parallelism().unwrap().get();
+
+        let threads = collected.chunks(core_count).map(|c| {
+
+            let (c, f) = (c.to_vec(), f.clone());
+
+            std::thread::spawn(move || c.iter().map(f).collect::<Vec<_>>())
+        });
+
+        threads.collect::<Vec<_>>()
+               .into_iter()
+               .flat_map(|t| t.join().unwrap())
+               .collect()
+    }
+}
+
 fn get_result(input: &str,
-              operators: &[impl Fn(usize, usize) -> usize]) -> usize {
+              operators: &[fn(usize, usize) -> usize]) -> usize {
+
+    let operators = operators.to_vec();
 
     input.split('\n')
          .map(|l| l.split(' ')
                    .map(|f| f.trim_end_matches(':').parse::<usize>().unwrap())
                    .collect::<Vec<_>>())
-         .filter(|v| is_possible(v[0], v[1], &v[2 ..], operators))
-         .map(|v| v[0])
+         .map_per_core(move |v| { if is_possible(v[0], v[1], &v[2 ..], &operators) { Some(v[0]) } else { None } })
+         .iter()
+         .flatten()
          .sum()
 }
 
 fn is_possible(target: usize,
                total: usize,
                series: &[usize],
-               operators: &[impl Fn(usize, usize) -> usize]) -> bool {
+               operators: &[fn(usize, usize) -> usize]) -> bool {
 
     if total > target { return false; }
 
