@@ -99,5 +99,5 @@ mod part_1 {
     fn example() { assert_eq!(get_result(EXAMPLE, (11, 7).into()), 12); }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT, (101, 103).into()), 0); }
+    fn real() { assert_eq!(get_result(INPUT, (101, 103).into()), 211773366); }
 }
