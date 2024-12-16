@@ -40,7 +40,7 @@ mod grid {
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct Offset { pub x: isize, pub y: isize } // Can be used as a coord
 
-    pub struct Grid<T> { pub cells: Vec<Vec<T>> } // Can be jagged
+    pub struct Grid<T> { cells: Vec<Vec<T>> } // Can be jagged
 
     pub struct GridIterator<'a, T> { grid: &'a Grid<T>, offset: Offset }
 
@@ -152,11 +152,24 @@ mod part_1 {
 
         let turn = |d: Offset, m: isize| Offset { x: -d.y * m, y: d.x * m };
 
-        let mut todo = vec![(start, Offset { x: 1, y: 0 })];
+        let mut todo = vec![(start, Offset { x: 1, y: 0 }, 0)];
 
-        while let Some((offset, direction)) = todo.pop() {
+        while let Some((offset, d, score)) = todo.pop() {
 
-            todo!();
+            if grid.get(offset) != Some(&'.') { continue; }
+
+            let cell = scores.get_mut(offset).unwrap();
+
+            if score < *cell {
+
+                *cell = score;
+
+                todo.push((offset + d, d, score + 1));
+
+                todo.push((offset + turn(d, 1), turn(d, 1), score + 1001));
+
+                todo.push((offset + turn(d, -1), turn(d, -1), score + 1001));
+            }
         }
 
         *scores.get(end).unwrap()
@@ -169,5 +182,5 @@ mod part_1 {
     fn example_b() { assert_eq!(get_result(EXAMPLE_B), 11048); }
     
     #[test]
-    fn real() { assert_eq!(get_result(INPUT), 0); }
+    fn real() { assert_eq!(get_result(INPUT), 88468); }
 }
