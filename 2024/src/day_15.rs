@@ -5,12 +5,14 @@ const EXAMPLE_A: &str = include_str!("../examples/day_15_a.txt");
 
 const EXAMPLE_B: &str = include_str!("../examples/day_15_b.txt");
 
+const EXAMPLE_C: &str = include_str!("../examples/day_15_c.txt");
+
 mod grid {
 
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    #[derive(Clone, Copy, PartialEq, Eq)]
     pub struct Offset { pub x: isize, pub y: isize } // Can be used as a coord
 
-    pub struct Grid<T> { cells: Vec<Vec<T>> } // Can be jagged
+    pub struct Grid<T> { pub cells: Vec<Vec<T>> } // Can be jagged
 
     pub struct GridIterator<'a, T> { grid: &'a Grid<T>, offset: Offset }
 
@@ -59,13 +61,6 @@ mod grid {
                 .zip(usize::try_from(offset.y).ok())
                 .and_then(|(x, y)| self.cells.get_mut(y)
                                              .and_then(|v| v.get_mut(x)))
-        }
-
-        pub fn map<U>(&self, f: impl Fn(&T) -> U) -> Grid<U> {
-
-            Grid::<U> { cells: self.cells.iter()
-                                         .map(|v| v.iter().map(&f).collect())
-                                         .collect() }
         }
         
         pub fn iter(&self) -> GridIterator<T> {
@@ -142,17 +137,17 @@ impl Warehouse {
     }
 }
 
+fn parse_direction(char: char) -> Offset {
+
+    match char { '^' => Offset { x:  0, y: -1 },
+                 'v' => Offset { x:  0, y:  1 },
+                 '<' => Offset { x: -1, y:  0 },
+                 _   => Offset { x:  1, y:  0 } }
+}
+
 mod part_1 {
 
     use super::*;
-
-    fn parse_direction(char: char) -> Offset {
-
-        match char { '^' => Offset { x:  0, y: -1 },
-                     'v' => Offset { x:  0, y:  1 },
-                     '<' => Offset { x: -1, y:  0 },
-                     _   => Offset { x:  1, y:  0 } }
-    }
 
     fn get_result(input: &str) -> isize {
 
@@ -182,4 +177,132 @@ mod part_1 {
     
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 1415498); }
+}
+
+mod part_2 {
+
+    use super::*;
+
+    fn parse(input: &str) -> Warehouse {
+
+        let expand_char = |c| match c { '#' => ['#', '#'],
+                                        'O' => ['[', ']'],
+                                        '@' => ['@', '.'],
+                                         c  => [ c,   c ] };
+        let mut grid = Grid { // TODO: Make parse which take iter of char?
+
+            cells: input.split('\n')
+                        .map(|l| l.chars().flat_map(expand_char).collect())
+                        .collect()
+        };
+
+        let robot = grid.iter().find(|(_, &char)| char == '@').unwrap().0;
+
+        *grid.get_mut(robot).unwrap() = '.';
+
+        Warehouse { robot, grid }
+    }
+
+    const LEFT:  Offset = Offset { x: -1, y: 0 };
+    const RIGHT: Offset = Offset { x:  1, y: 0 };
+
+    fn other_edge(char: Option<&char>) -> Option<Offset> {
+
+        match char { Some('[') => Some(RIGHT),
+                     Some(']') => Some(LEFT),
+                     _         => None }
+    }
+
+    fn move_boxes(grid: &mut Grid<char>, offset: Offset, direction: Offset) {
+
+        if direction.y == 0 {
+
+            let &char = grid.get(offset).unwrap();
+
+            if char == '[' || char == ']' {
+
+                move_boxes(grid, offset + direction, direction);
+
+                *grid.get_mut(offset + direction).unwrap() = char;
+
+                *grid.get_mut(offset).unwrap() = '.';
+            }
+        }
+        else if let Some(other_edge) = other_edge(grid.get(offset)) {
+
+            move_boxes(grid, offset + direction, direction);
+            move_boxes(grid, offset + direction + other_edge, direction);
+
+            *grid.get_mut(offset + direction).unwrap() =
+                *grid.get(offset).unwrap();
+
+            *grid.get_mut(offset + direction + other_edge).unwrap() =
+                *grid.get(offset + other_edge).unwrap();
+
+            *grid.get_mut(offset).unwrap() = '.';
+
+            *grid.get_mut(offset + other_edge).unwrap() = '.';
+        }
+    }
+
+    fn can_move(grid: &Grid<char>, offset: Offset, direction: Offset)
+        -> bool {
+
+        match (direction.y, grid.get(offset)) {
+
+            (_, Some('.')) => true,
+
+            (0, Some('[' | ']')) =>
+                can_move(grid, offset + direction, direction),
+
+            (_, Some('[')) =>
+                can_move(grid, offset + direction, direction)
+                && can_move(grid, offset + direction + RIGHT, direction),
+
+            (_, Some(']')) =>
+                can_move(grid, offset + direction, direction)
+                && can_move(grid, offset + direction + LEFT, direction),
+
+            _ => false
+        }
+    }
+
+    fn move_robot(warehouse: &mut Warehouse, direction: Offset) {
+
+        if can_move(&warehouse.grid, warehouse.robot + direction, direction) {
+            
+            warehouse.robot = warehouse.robot + direction;
+
+            move_boxes(&mut warehouse.grid, warehouse.robot, direction);
+        }
+    }
+
+    fn get_result(input: &str) -> isize {
+
+        let mut parts = input.split("\n\n");
+
+        let mut warehouse = parse(parts.next().unwrap());
+
+        let direction_chars =
+            parts.next().unwrap().chars().filter(|&c| c != '\n');
+
+        for direction in direction_chars.map(parse_direction) {
+
+            move_robot(&mut warehouse, direction);
+        }
+
+        warehouse.grid.iter()
+                      .filter(|(_, &c)| c == '[')
+                      .map(|(o, _)| o.y * 100 + o.x)
+                      .sum()
+    }
+
+    #[test]
+    fn example_c() { assert_eq!(get_result(EXAMPLE_C), 618); }
+
+    #[test]
+    fn example_b() { assert_eq!(get_result(EXAMPLE_B), 9021); }
+
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT), 1432898); }
 }
