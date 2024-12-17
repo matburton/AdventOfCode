@@ -37,7 +37,7 @@ const EXAMPLE_B: &str = "#################\n\
 
 mod grid {
 
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct Offset { pub x: isize, pub y: isize } // Can be used as a coord
 
     pub struct Grid<T> { cells: Vec<Vec<T>> } // Can be jagged
@@ -132,13 +132,27 @@ mod grid {
 
 use grid::*;
 
-mod part_1 {
+const DIRECTIONS: [Offset; 4] = [Offset { x:  0, y: -1 },
+                                 Offset { x:  1, y:  0 },
+                                 Offset { x:  0, y:  1 },
+                                 Offset { x: -1, y:  0 }];
 
-    use super::*;
+fn diection_index(direction: Offset) -> usize {
 
-    fn get_result(input: &str) -> usize {
+    DIRECTIONS.iter().position(|&o| o == direction).unwrap()
+}
 
-        let mut grid = Grid::parse(input, Ok).unwrap();
+fn turn(d: Offset, m: isize) -> Offset { Offset { x: -d.y * m, y: d.x * m } }
+
+fn flip(d: Offset) -> Offset { Offset { x: -d.x, y: -d.y } }
+
+struct Maze { grid: Grid<char>, start: Offset, end: Offset }
+
+impl Maze {
+
+    fn parse(text: &str) -> Self {
+
+        let mut grid = Grid::parse(text, Ok).unwrap();
 
         let mut find = |char| {
             let offset = grid.iter().find(|(_, &c)| c == char).unwrap().0;
@@ -148,31 +162,49 @@ mod part_1 {
 
         let (start, end) = (find('S'), find('E'));
 
-        let mut scores = grid.map(|_| usize::MAX);
+        Self { grid, start, end }
+    }
 
-        let turn = |d: Offset, m: isize| Offset { x: -d.y * m, y: d.x * m };
+    fn scores(&self) -> Grid<[usize; 4]> {
 
-        let mut todo = vec![(start, Offset { x: 1, y: 0 }, 0)];
+        let mut scores = self.grid.map(|_| [usize::MAX; 4]);
+
+        let mut todo = vec![(self.start, Offset { x: 1, y: 0 }, 0)];
 
         while let Some((offset, d, score)) = todo.pop() {
 
-            if grid.get(offset) != Some(&'.') { continue; }
+            if self.grid.get(offset) != Some(&'.') { continue; }
 
-            let cell = scores.get_mut(offset).unwrap();
+            let direction_score = scores.get_mut(offset)
+                                        .unwrap()
+                                        .get_mut(diection_index(d))
+                                        .unwrap();
 
-            if score < *cell {
+            if score < *direction_score {
 
-                *cell = score;
+                *direction_score = score;
 
                 todo.push((offset + d, d, score + 1));
 
-                todo.push((offset + turn(d, 1), turn(d, 1), score + 1001));
+                todo.push((offset, turn(d, 1), score + 1000));
 
-                todo.push((offset + turn(d, -1), turn(d, -1), score + 1001));
+                todo.push((offset, turn(d, -1), score + 1000));
             }
         }
 
-        *scores.get(end).unwrap()
+        scores
+    }
+}
+
+mod part_1 {
+
+    use super::*;
+
+    fn get_result(input: &str) -> usize {
+
+        let maze = Maze::parse(input);
+
+        *maze.scores().get(maze.end).unwrap().iter().min().unwrap()
     }
    
     #[test]
@@ -183,4 +215,54 @@ mod part_1 {
     
     #[test]
     fn real() { assert_eq!(get_result(INPUT), 88468); }
+}
+
+mod part_2 {
+
+    use super::*;
+
+    fn get_result(input: &str) -> usize {
+
+        let maze = Maze::parse(input);
+
+        let scores = maze.scores();
+
+        let mut visited = std::collections::BTreeSet::from([maze.end]);
+
+        let direction_score = |o, d| scores.get(o).unwrap()[diection_index(d)];
+
+        let min_score = DIRECTIONS.map(|d| direction_score(maze.end, d))
+                                  .into_iter()
+                                  .min()
+                                  .unwrap();
+
+        let mut todo = Vec::from_iter
+            (DIRECTIONS.into_iter()
+                       .filter(|&d| direction_score(maze.end, d) == min_score)
+                       .map(|d| (maze.end + flip(d), d)));
+
+        while let Some((offset, direction)) = todo.pop() {
+
+            if maze.grid.get(offset) != Some(&'.') { continue; }
+
+            if !visited.insert(offset) { continue; }
+
+            // TODO: Look at tiles around, get their scores to this offset
+            //       Adjust those scores based on current direction
+            //       Push min(s)
+        }
+
+        maze.grid.debug(|o, &c| if visited.contains(&o) { 'O' } else { c });
+
+        visited.len()
+    }
+  
+    #[test]
+    fn example_a() { assert_eq!(get_result(EXAMPLE_A), 45); }
+
+    #[test]
+    fn example_b() { assert_eq!(get_result(EXAMPLE_B), 64); }
+    
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT), 0); }
 }
