@@ -5,7 +5,7 @@ const EXAMPLE: &str = include_str!("../examples/day_18.txt");
 
 mod grid {
 
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, PartialEq, Eq)]
     pub struct Offset { pub x: isize, pub y: isize } // Can be used as a coord
 
     pub struct Grid<T> { cells: Vec<Vec<T>> } // Can be jagged
@@ -58,6 +58,31 @@ mod grid {
                                          .map(|v| v.iter().map(&f).collect())
                                          .collect() }
         }
+
+        pub fn iter(&self) -> GridIterator<T> {
+
+            GridIterator { grid: self, offset: Offset { x: -1, y: 0 } }
+        }
+    }
+
+    impl<'a, T> Iterator for GridIterator<'a, T> {
+        
+        type Item = (Offset, &'a T);
+
+        fn next(&mut self) -> Option<Self::Item> {
+
+            if self.offset.y as usize >= self.grid.cells.len() { return None; }
+
+            self.offset.x += 1;
+
+            match self.grid.get(self.offset) {
+
+                Some(v) => Some((self.offset, v)),
+
+                _ => { self.offset = Offset { x: -1, y: self.offset.y + 1 };
+                       self.next() }
+            }
+        }
     }
 }
 
@@ -68,37 +93,47 @@ const DIRECTIONS: [Offset; 4] = [Offset { x:  0, y: -1 },
                                  Offset { x:  0, y:  1 },
                                  Offset { x: -1, y:  0 }];
 
-struct Maze { grid: Grid<bool>, start: Offset, end: Offset }
+fn min_path(grid: &Grid<bool>, start: Offset, end: Offset)
+    -> Option<Grid<bool>> {
 
-impl Maze {
+    let mut scores = grid.map(|_| usize::MAX);
 
-    fn new(grid: Grid<bool>, start: Offset, end: Offset) -> Self {
+    let mut todo = vec![(start, 0)];
 
-        Self { grid, start, end }
-    }
+    while let Some((offset, score)) = todo.pop() {
 
-    fn score(&self) -> usize {
+        if !grid.get(offset).is_some_and(|&b| b) { continue; }
 
-        let mut scores = self.grid.map(|_| usize::MAX);
+        let cell = scores.get_mut(offset).unwrap();
 
-        let mut todo = vec![(self.start, 0)];
+        if score < *cell {
 
-        while let Some((offset, score)) = todo.pop() {
+            *cell = score;
 
-            if !self.grid.get(offset).is_some_and(|&b| b) { continue; }
-
-            let cell = scores.get_mut(offset).unwrap();
-
-            if score < *cell {
-
-                *cell = score;
-
-                for d in DIRECTIONS { todo.push((offset + d, score + 1)); }
-            }
+            for d in DIRECTIONS { todo.push((offset + d, score + 1)); }
         }
-
-        *scores.get(self.end).unwrap()
     }
+
+    if *scores.get(end).unwrap() == usize::MAX { return None; }
+
+    let mut min_path = grid.map(|_| false);
+
+    *min_path.get_mut(end).unwrap() = true;
+
+    let mut position = end;
+
+    while position != start {
+
+        position = DIRECTIONS
+                  .map(|d| position + d)
+                  .into_iter()
+                  .min_by_key(|&o| scores.get(o).unwrap_or(&usize::MAX))
+                  .unwrap();
+
+        *min_path.get_mut(position).unwrap() = true;
+    }
+
+    Some(min_path)
 }
 
 mod part_1 {
@@ -109,7 +144,7 @@ mod part_1 {
 
         let falling =
             input.split('\n')
-                 .map(|l| l.split(',').map(|f| f.parse::<isize>().unwrap()))
+                 .map(|l| l.split(',').map(|f| f.parse().unwrap()))
                  .map(|mut i| Offset { x: i.next().unwrap(),
                                        y: i.next().unwrap() })
                  .take(take);
@@ -118,7 +153,11 @@ mod part_1 {
 
         for offset in falling { *grid.get_mut(offset).unwrap() = false; }
 
-        Maze::new(grid, Offset { x: 0, y: 0 }, end).score()
+        min_path(&grid, Offset { x: 0, y: 0 }, end)
+            .unwrap()
+            .iter()
+            .filter(|&(_, &b)| b)
+            .count() - 1
     }
    
     #[test]
@@ -132,5 +171,57 @@ mod part_1 {
     fn real() {
         
         assert_eq!(get_result(INPUT, Offset { x: 70, y: 70 }, 1024), 292);
+    }
+}
+
+mod part_2 {
+
+    use super::*;
+
+    fn get_result(input: &str, end: Offset) -> String {
+
+        let falling =
+            input.split('\n')
+                 .map(|l| l.split(',').map(|f| f.parse().unwrap()))
+                 .map(|mut i| Offset { x: i.next().unwrap(),
+                                       y: i.next().unwrap() });
+
+        let mut grid = Grid::new(end, true).unwrap();
+
+        let get_min_path = |grid: &Grid<bool>|
+            min_path(grid, Offset { x: 0, y: 0 }, end);
+
+        let mut min_path = get_min_path(&grid).unwrap();
+
+        for offset in falling {
+
+            *grid.get_mut(offset).unwrap() = false;
+
+            if !min_path.get(offset).unwrap() { continue; }
+
+            if let Some(path) = get_min_path(&grid) {
+
+                min_path = path;
+            }
+            else {
+
+                return format!("{},{}", offset.x, offset.y);
+            }
+        }        
+
+        panic!();
+    }
+   
+    #[test]
+    fn example() {
+        
+        assert_eq!(get_result(EXAMPLE, Offset { x: 6, y: 6 }), "6,1");
+    }
+
+   
+    #[test]
+    fn real() {
+        
+        assert_eq!(get_result(INPUT, Offset { x: 70, y: 70 }), "58,44");
     }
 }
