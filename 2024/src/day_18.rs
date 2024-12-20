@@ -58,31 +58,6 @@ mod grid {
                                          .map(|v| v.iter().map(&f).collect())
                                          .collect() }
         }
-
-        pub fn iter(&self) -> GridIterator<T> {
-
-            GridIterator { grid: self, offset: Offset { x: -1, y: 0 } }
-        }
-    }
-
-    impl<'a, T> Iterator for GridIterator<'a, T> {
-        
-        type Item = (Offset, &'a T);
-
-        fn next(&mut self) -> Option<Self::Item> {
-
-            if self.offset.y as usize >= self.grid.cells.len() { return None; }
-
-            self.offset.x += 1;
-
-            match self.grid.get(self.offset) {
-
-                Some(v) => Some((self.offset, v)),
-
-                _ => { self.offset = Offset { x: -1, y: self.offset.y + 1 };
-                       self.next() }
-            }
-        }
     }
 }
 
@@ -93,8 +68,7 @@ const DIRECTIONS: [Offset; 4] = [Offset { x:  0, y: -1 },
                                  Offset { x:  0, y:  1 },
                                  Offset { x: -1, y:  0 }];
 
-fn min_path(grid: &Grid<bool>, start: Offset, end: Offset)
-    -> Option<Grid<bool>> {
+fn scores(grid: &Grid<bool>, start: Offset) -> Grid<usize> {
 
     let mut scores = grid.map(|_| usize::MAX);
 
@@ -114,26 +88,7 @@ fn min_path(grid: &Grid<bool>, start: Offset, end: Offset)
         }
     }
 
-    if *scores.get(end).unwrap() == usize::MAX { return None; }
-
-    let mut min_path = grid.map(|_| false);
-
-    *min_path.get_mut(end).unwrap() = true;
-
-    let mut position = end;
-
-    while position != start {
-
-        position = DIRECTIONS
-                  .map(|d| position + d)
-                  .into_iter()
-                  .min_by_key(|&o| scores.get(o).unwrap_or(&usize::MAX))
-                  .unwrap();
-
-        *min_path.get_mut(position).unwrap() = true;
-    }
-
-    Some(min_path)
+    scores
 }
 
 mod part_1 {
@@ -153,11 +108,7 @@ mod part_1 {
 
         for offset in falling { *grid.get_mut(offset).unwrap() = false; }
 
-        min_path(&grid, Offset { x: 0, y: 0 }, end)
-            .unwrap()
-            .iter()
-            .filter(|&(_, &b)| b)
-            .count() - 1
+        *scores(&grid, Offset { x: 0, y: 0 }).get(end).unwrap()
     }
    
     #[test]
@@ -177,6 +128,33 @@ mod part_1 {
 mod part_2 {
 
     use super::*;
+
+    fn min_path(grid: &Grid<bool>, start: Offset, end: Offset)
+        -> Option<Grid<bool>> {
+
+        let scores = scores(grid, start);
+
+        if *scores.get(end).unwrap() == usize::MAX { return None; }
+
+        let mut min_path = grid.map(|_| false);
+
+        *min_path.get_mut(end).unwrap() = true;
+
+        let mut position = end;
+
+        while position != start {
+
+            position = DIRECTIONS
+                    .map(|d| position + d)
+                    .into_iter()
+                    .min_by_key(|&o| scores.get(o).unwrap_or(&usize::MAX))
+                    .unwrap();
+
+            *min_path.get_mut(position).unwrap() = true;
+        }
+
+        Some(min_path)
+    }
 
     fn get_result(input: &str, end: Offset) -> String {
 
