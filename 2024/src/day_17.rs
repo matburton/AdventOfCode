@@ -7,6 +7,7 @@ const EXAMPLE: &str = "Register A: 729\n\
                        \n\
                        Program: 0,1,5,4,3,0";
 
+#[derive(Clone)]
 struct Computer { counter: usize,
                   registers: [usize; 3],
                   program: Vec<usize>,
@@ -37,7 +38,7 @@ impl Computer {
         Self { counter: 0, registers, program, output: Vec::new() }
     }
 
-    fn run(&mut self) {
+    fn run(&mut self) -> bool {
 
         while self.counter < self.program.len() - 1 {
 
@@ -48,8 +49,7 @@ impl Computer {
 
             let combo = match op { 4 .. 7 => self.registers[op - 4], _ => op };
 
-            let mut dv = |r|
-                self.registers[r] = self.registers[0] / (1 << combo);
+            let mut dv = |r| self.registers[r] = self.registers[0] >> combo;
 
             match code {
 
@@ -63,11 +63,13 @@ impl Computer {
             
                 4 /* bxc */ => self.registers[1] ^= self.registers[2],
 
-                5 /* out */ => self.output.push(combo % 8),
+                5 /* out */ => { self.output.push(combo % 8); return true; },
 
                 c /* bdv, cdv */ => dv(c - 5)
             };
         }
+
+        false
     }
 }
 
@@ -79,7 +81,7 @@ mod part_1 {
 
         let mut computer = Computer::parse(input);
 
-        computer.run();
+        while computer.run() {}
 
         format!("{:?}", computer.output).replace(['[', ']', ' '], "")
     }

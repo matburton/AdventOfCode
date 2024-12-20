@@ -222,7 +222,9 @@ mod part_2 {
 
         let direction_score = |o, d| scores.get(o).unwrap()[diection_index(d)];
 
-        let mut visited = std::collections::BTreeSet::from([maze.end]);
+        let mut visited = maze.grid.map(|_| false);
+
+        *visited.get_mut(maze.end).unwrap() = true;
 
         let &min_score =
             maze.scores().get(maze.end).unwrap().iter().min().unwrap();
@@ -234,7 +236,11 @@ mod part_2 {
 
             if direction_score(offset, direction) != target_score { continue; }
 
-            if !visited.insert(offset) { continue; }
+            let visited_cell = visited.get_mut(offset).unwrap();
+
+            if *visited_cell { continue; }
+
+            *visited_cell = true;
 
             if target_score == 0 { continue; }
 
@@ -259,7 +265,7 @@ mod part_2 {
             turn_n_push(-1);
         }
 
-        visited.len()
+        visited.iter().filter(|&(_, &b)| b).count()
     }
   
     #[test]
