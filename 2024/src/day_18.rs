@@ -145,10 +145,10 @@ mod part_2 {
         while position != start {
 
             position = DIRECTIONS
-                    .map(|d| position + d)
-                    .into_iter()
-                    .min_by_key(|&o| scores.get(o).unwrap_or(&usize::MAX))
-                    .unwrap();
+                      .map(|d| position + d)
+                      .into_iter()
+                      .min_by_key(|&o| scores.get(o).unwrap_or(&usize::MAX))
+                      .unwrap();
 
             *min_path.get_mut(position).unwrap() = true;
         }
