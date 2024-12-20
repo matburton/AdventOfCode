@@ -104,11 +104,13 @@ const DIRECTIONS: [Offset; 4] = [Offset { x:  0, y: -1 },
                                  Offset { x:  0, y:  1 },
                                  Offset { x: -1, y:  0 }];
 
-fn scores(grid: &Grid<bool>, start: Offset) -> Grid<usize> {
+fn scores(grid: &Grid<bool>, start: Offset, scores: &Grid<usize>) -> Grid<usize> {
 
-    let mut scores = grid.map(|_| usize::MAX);
+    let mut scores = scores.map(|&s| s);
 
-    let mut todo = vec![(start, 0)];
+    let mut todo = vec![(start, *scores.get(start).unwrap())];
+
+    *scores.get_mut(start).unwrap() = usize::MAX;
 
     while let Some((offset, score)) = todo.pop() {
 
@@ -140,9 +142,13 @@ mod part_1 {
 
         let mut grid = char_grid.map(|&c| c != '#');
 
-        let time = |grid: &_| *scores(grid, start).get(end).unwrap();
+        let mut scores_grid = grid.map(|_| usize::MAX);
 
-        let no_cheat_time = time(&grid);
+        *scores_grid.get_mut(start).unwrap() = 0;
+
+        scores_grid = scores(&grid, start, &scores_grid);
+
+        let no_cheat_time = *scores_grid.get(end).unwrap();
 
         let can_pass_through = |o, grid: &Grid<bool>|
                (   grid.get(o + Offset { x:  0, y: -1 }) == Some(&true)
@@ -168,7 +174,16 @@ mod part_1 {
 
             last_removed = Some(offset);
 
-            cheat_times.push(time(&grid));
+            let restart_at = DIRECTIONS
+                            .map(|d| offset + d)
+                            .into_iter()
+                            .filter(|&o| grid.get(o) == Some(&true))
+                            .min_by_key(|&o| *scores_grid.get(o).unwrap())
+                            .unwrap();
+
+            let new_scores_grid = scores(&grid, restart_at, &scores_grid);
+
+            cheat_times.push(*new_scores_grid.get(end).unwrap());
         }
 
         cheat_times.into_iter()
