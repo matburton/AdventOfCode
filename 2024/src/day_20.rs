@@ -35,6 +35,16 @@ mod grid {
             Self { x: self.x + offset.x, y: self.y + offset.y }
         }
     }
+
+    impl std::ops::Sub<Offset> for Offset {
+
+        type Output = Self;
+
+        fn sub(self, offset: Self) -> Self {
+
+            Self { x: self.x - offset.x, y: self.y - offset.y }
+        }
+    }
    
     impl<T> Grid<T> {
        
@@ -104,11 +114,11 @@ const DIRECTIONS: [Offset; 4] = [Offset { x:  0, y: -1 },
                                  Offset { x:  0, y:  1 },
                                  Offset { x: -1, y:  0 }];
 
-fn scores(grid: &Grid<bool>, start: Offset, scores: &Grid<usize>) -> Grid<usize> {
+fn scores(grid: &Grid<bool>, start: Offset) -> Grid<usize> {
 
-    let mut scores = scores.map(|&s| s);
+    let mut scores = grid.map(|_| usize::MAX);
 
-    let mut todo = vec![(start, *scores.get(start).unwrap())];
+    let mut todo = vec![(start, 0)];
 
     *scores.get_mut(start).unwrap() = usize::MAX;
 
@@ -140,50 +150,43 @@ mod part_1 {
         let start = char_grid.iter().find(|(_, &c)| c == 'S').unwrap().0;
         let end   = char_grid.iter().find(|(_, &c)| c == 'E').unwrap().0;
 
-        let mut grid = char_grid.map(|&c| c != '#');
+        let grid = char_grid.map(|&c| c != '#');
 
-        let mut scores_grid = grid.map(|_| usize::MAX);
+        let scores_from_start = scores(&grid, start);
 
-        *scores_grid.get_mut(start).unwrap() = 0;
+        let scores_from_end = scores(&grid, end);
 
-        scores_grid = scores(&grid, start, &scores_grid);
-
-        let no_cheat_time = *scores_grid.get(end).unwrap();
-
-        let can_pass_through = |o, grid: &Grid<bool>|
-               (   grid.get(o + Offset { x:  0, y: -1 }) == Some(&true)
-                && grid.get(o + Offset { x:  0, y:  1 }) == Some(&true))
-            || (   grid.get(o + Offset { x: -1, y:  0 }) == Some(&true)
-                && grid.get(o + Offset { x:  1, y:  0 }) == Some(&true));
+        let no_cheat_time = *scores_from_start.get(end).unwrap();
 
         let wall_offsets = grid.iter()
                                .filter(|&(_, b)| !b)
                                .map(|(o, _)| o)
-                               .filter(|&o| can_pass_through(o, &grid))
                                .collect::<Vec<_>>();
 
         let mut cheat_times = Vec::new();
 
-        let mut last_removed = None;
-
         for offset in wall_offsets {
 
-            if let Some(o) = last_removed { *grid.get_mut(o).unwrap() = false; }
+            let mut cheat_time = None;
 
-            *grid.get_mut(offset).unwrap() = true;
+            let mut try_cheat = |d| {
 
-            last_removed = Some(offset);
+                let score = scores_from_start
+                           .get(offset + d)
+                           .and_then(|&t| scores_from_end.get(offset - d)
+                                                         .map(|&f| (t, f)))
+                           .and_then(|(t, f)| t.checked_add(f))
+                           .and_then(|s| s.checked_add(2));
 
-            let restart_at = DIRECTIONS
-                            .map(|d| offset + d)
-                            .into_iter()
-                            .filter(|&o| grid.get(o) == Some(&true))
-                            .min_by_key(|&o| *scores_grid.get(o).unwrap())
-                            .unwrap();
+                if let Some(s) = score {
 
-            let new_scores_grid = scores(&grid, restart_at, &scores_grid);
+                    if cheat_time.is_none_or(|c| s < c) { cheat_time = Some(s); }
+                }
+            };
 
-            cheat_times.push(*new_scores_grid.get(end).unwrap());
+            for direction in DIRECTIONS { try_cheat(direction); }
+
+            if let Some(t) = cheat_time { cheat_times.push(t); }
         }
 
         cheat_times.into_iter()
