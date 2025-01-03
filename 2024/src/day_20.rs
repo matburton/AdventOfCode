@@ -16,7 +16,6 @@ const EXAMPLE: &str = "###############\n\
                        #.#.#.#.#.#.###\n\
                        #...#...#...###\n\
                        ###############";
-
 mod grid {
 
     #[derive(Clone, Copy)]
@@ -33,16 +32,6 @@ mod grid {
         fn add(self, offset: Self) -> Self {
 
             Self { x: self.x + offset.x, y: self.y + offset.y }
-        }
-    }
-
-    impl std::ops::Sub<Offset> for Offset {
-
-        type Output = Self;
-
-        fn sub(self, offset: Self) -> Self {
-
-            Self { x: self.x - offset.x, y: self.y - offset.y }
         }
     }
    
@@ -139,59 +128,62 @@ fn scores(grid: &Grid<bool>, start: Offset) -> Grid<usize> {
     scores
 }
 
+fn get_result(input: &str, min_time_save: usize, max_cheat: isize) -> usize {
+
+    let char_grid = Grid::parse(input, Ok).unwrap();
+
+    let start = char_grid.iter().find(|(_, &c)| c == 'S').unwrap().0;
+    let end   = char_grid.iter().find(|(_, &c)| c == 'E').unwrap().0;
+
+    let grid = char_grid.map(|&c| c != '#');
+
+    let scores_from_start = scores(&grid, start);
+
+    let scores_from_end = scores(&grid, end);
+
+    let &no_cheat_time = scores_from_start.get(end).unwrap();
+
+    let mut cheat_count = 0;
+
+    for cheat_from in grid.iter().filter(|&(_, &b)| b).map(|(o, _)| o) {
+
+        let &score_from = scores_from_start.get(cheat_from).unwrap();
+
+        for x in -max_cheat ..= max_cheat {
+
+            for y in -max_cheat ..= max_cheat {
+
+                let cheat_length = x.unsigned_abs() + y.unsigned_abs();
+
+                if cheat_length > max_cheat.unsigned_abs() { continue; }
+
+                let cheat_to = cheat_from + Offset { x, y };
+
+                if grid.get(cheat_to) == Some(&true) {
+
+                    let cheat_time = score_from
+                                   + cheat_length
+                                   + scores_from_end.get(cheat_to).unwrap();
+    
+                    if cheat_time + min_time_save <= no_cheat_time {
+    
+                        cheat_count += 1;
+                    }
+                }            
+            }
+        }
+    }
+
+    cheat_count
+}
+
 mod part_1 {
 
     use super::*;
 
     fn get_result(input: &str, min_time_save: usize) -> usize {
-        
-        let char_grid = Grid::parse(input, Ok).unwrap();
 
-        let start = char_grid.iter().find(|(_, &c)| c == 'S').unwrap().0;
-        let end   = char_grid.iter().find(|(_, &c)| c == 'E').unwrap().0;
-
-        let grid = char_grid.map(|&c| c != '#');
-
-        let scores_from_start = scores(&grid, start);
-
-        let scores_from_end = scores(&grid, end);
-
-        let no_cheat_time = *scores_from_start.get(end).unwrap();
-
-        let wall_offsets = grid.iter()
-                               .filter(|&(_, b)| !b)
-                               .map(|(o, _)| o)
-                               .collect::<Vec<_>>();
-
-        let mut cheat_times = Vec::new();
-
-        for offset in wall_offsets {
-
-            let mut cheat_time = None;
-
-            let mut try_cheat = |d| {
-
-                let score = scores_from_start
-                           .get(offset + d)
-                           .and_then(|&t| scores_from_end.get(offset - d)
-                                                         .map(|&f| (t, f)))
-                           .and_then(|(t, f)| t.checked_add(f))
-                           .and_then(|s| s.checked_add(2));
-
-                if let Some(s) = score {
-
-                    if cheat_time.is_none_or(|c| s < c) { cheat_time = Some(s); }
-                }
-            };
-
-            for direction in DIRECTIONS { try_cheat(direction); }
-
-            if let Some(t) = cheat_time { cheat_times.push(t); }
-        }
-
-        cheat_times.into_iter()
-                   .filter(|&t| t + min_time_save <= no_cheat_time)
-                   .count()
+        super::get_result(input, min_time_save, 2)
     }
    
     #[test]
@@ -200,4 +192,21 @@ mod part_1 {
    
     #[test]
     fn real() { assert_eq!(get_result(INPUT, 100), 1422); }
+}
+
+mod part_2 {
+
+    use super::*;
+
+    fn get_result(input: &str, min_time_save: usize) -> usize {
+
+        super::get_result(input, min_time_save, 20)
+    }
+
+    #[test]
+    fn example() { assert_eq!(get_result(EXAMPLE, 50), 285); }
+
+   
+    #[test]
+    fn real() { assert_eq!(get_result(INPUT, 100), 1009299); }
 }
